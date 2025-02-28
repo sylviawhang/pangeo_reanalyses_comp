@@ -1,5 +1,6 @@
 import xarray as xr
 import matplotlib.pyplot as plt
+from matplotlib.colors import BoundaryNorm, ListedColormap
 import numpy as np
 from ncf_funct import cdf_merge, replace_coordinate
 
@@ -16,8 +17,6 @@ Ozone:         'o3'               'O3'                       '''
 # plotting functions
 
 def annual_zonal_mean(xrds, lon, time, variable, title):
-    if title == 'MERRA-2':
-        xrds = xrds.sel(lev = slice(2.00000000e+02, 1.00000000e-01))
     if title == 'JRA-55' : 
         xrds = replace_coordinate(xrds)
     xrds = xrds[[variable]]
@@ -37,7 +36,7 @@ def seasonal_zonal_mean(xrds, lon, time, variable, title):
     return seasonal_xrds
 
 def plot_zonal_means(xrds, savename, lat, lon, lev, time, variable, title):
-    # Goal create a 1 x 5 plot for MERRA2 with temperatures
+    # Goal create a 1 x 5 plot of climatological zonal means
     fig, axes = plt.subplots(nrows=5, ncols=1, figsize=(10, 25), sharex = False, layout = 'constrained')
     vmin, vmax, levels, cmap = 185, 275, 19, 'jet' # configure
     
@@ -120,6 +119,61 @@ def plot_zonal_means(xrds, savename, lat, lon, lev, time, variable, title):
     print(f' saving to... {savename}')
     plt.savefig(savename, dpi = 250)
 
+def plot_annual(xrds, lon, lat, lev, time, variable, savename):
+    annual_xrds = annual_zonal_mean(xrds, lon, time, variable, '')
+    
+    #annual_xrds[variable] = annual_xrds[variable].bfill(dim=lev)  # Backward fill along pressure level
+    #annual_xrds[variable] = annual_xrds[variable].ffill(dim=lat)
+    #annual_xrds[variable] = annual_xrds[variable].bfill(dim=lat)  # Backward fill along pressure level
+
+    print(annual_xrds)
+    print(annual_xrds.variables[variable].values)
+    
+    #custom color map and boundaries
+    boundaries = [180, 190, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
+    #custom_colors = ['deeppink','mediumvioletred', 'darkmagenta', 'rebeccapurple', 'indigo', 'darkslateblue', 'royalblue', 'cornflowerblue', 'deepskyblue', 'darkturquoise', 'mediumseagreen', 'seagreen', 'yellow', 'gold', 'orange', 'darkorange', 'orangered' , 'red', 'firebrick', 'darkred']
+    #custom_cmap = ListedColormap(custom_colors)
+    #norm = BoundaryNorm(boundaries, custom_cmap.N)
+    
+    plt.figure(figsize = (12,6), layout = 'constrained')
+    xr.plot.contourf(annual_xrds[variable],
+            x = lat,
+            y = lev, 
+            yincrease =  False,
+            add_colorbar=True,
+            cbar_kwargs= {'label':'Temperature, K', 'drawedges':True, 'ticks':boundaries},
+            levels = boundaries,
+            add_labels = False,
+            cmap= 'jet',
+            extend="neither",
+            yscale = 'log',
+            ylim = (1000, 1))
+    cs = xr.plot.contour(annual_xrds[variable],
+            x = lat,
+            y = lev, 
+            yincrease =  False,
+            add_colorbar= False,
+            add_labels = False,
+            linewidths = 0.5,
+            colors ="k",
+            levels = boundaries,
+            yscale = 'log',
+            ylim = (1000, 1))
+    plt.clabel(cs, cs.levels, fontsize=10)
+    annual_xrds.close()
+    
+    cbar = plt.gca().collections[0].colorbar  # Get the colorbar object
+    cbar.ax.tick_params(length=0)
+    cbar.ax.set_ylabel('Temperature, K', fontsize=12) 
+
+    plt.ylim(1000,1)
+    plt.ylabel('Pressure, hPa', fontsize = 12)
+    plt.xlabel('Latitude, deg N', fontsize = 12)
+    plt.title('MERRA2 Zonal Mean Temperature (Annual 2004-2014)', fontsize = 15)
+
+    print(f'saving to... {savename}')
+    plt.savefig(savename, dpi = 300)
+
 if __name__ == '__main__':
     # plot MERRA2
     '''file = '/dx02/siw2111/MERRA-2/MERRA2_100.instM_3d_asm_Np.198001.nc4' # dummy
@@ -129,22 +183,14 @@ if __name__ == '__main__':
     plot_zonal_means(xrds, savename, lat = 'lat', lon = 'lon', lev ='lev', time = 'time', variable = 'T', title = 'MERRA-2')
     xrds = xrds.close()'''
 
-    '''#plot ERA-5
-    file = '/dx02/siw2111/MERRA-2/MERRA2_100.instM_3d_asm_Np.198001.nc4' # dummy
-    savename = '/home/siw2111/reanalyses_plots/02-06-2025/seasonal_zonal_temp_ERA5_0206.png'
-    print(f'reading... {file}')
-    xrds = xr.open_dataset(file, chunks = 'auto')
-    plot_zonal_means(xrds, savename, lat = 'latitude', lon = 'longitude', lev ='pressure_level', time = 'valid_time', variable = 't', title = 'ERA-5')
-    xrds = xrds.close()'''
-
-    # plot JRA55
-    #file = '/dx02/siw2111/JRA-55/JRA-55_ALL-TIME' 
-    savename = '/home/siw2111/reanalyses_plots/02-06-2025/seasonal_zonal_T_JRA55_0206.png'
-    #print(f'reading... {file}')
-    #xrds = xr.open_dataset(file, chunks = 'auto')
-    xrds = cdf_merge()
-    plot_zonal_means(xrds, savename, lat = 'g4_lat_2', lon = 'g4_lon_3', lev ='lv_HYBL1', time = 'initial_time0_hours', variable = 'TMP_GDS4_HYBL_S123', title = 'JRA-55')
-
+    xrds = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    xrds = xrds.sortby('time')
+    print(xrds)
+    xrds = xrds.sel(time = slice('2004-01-01', '2014-01-01'))
+    xrds = xrds.sel(lev = slice(1000,1))
+    print(xrds)
+    savename = '/home/siw2111/reanalyses_plots/02-25-2025/MERRA2_zonal_mean_2004-2014'
+    plot_annual(xrds, lon = 'lon', lat = 'lat', lev = 'lev', time = 'time', variable = 'T', savename = savename )
 
 
 

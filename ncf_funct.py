@@ -11,9 +11,9 @@ def cdf_merge(files_path = '/dx02/siw2111/JRA-55/*.nc', savename = '/dx02/siw211
     xrds = xrds[[variable]] # select temperature
     print(xrds)
 
-    '''print(f"saving to... {savename}")
+    print(f"saving to... {savename}")
     xrds.to_netcdf(savename) # Export netcdf file
-    print(f'saved as... {savename}')'''
+    print(f'saved as... {savename}')
     
     return xrds
 
@@ -74,6 +74,15 @@ def interpolate(xrds1, xrds2):
     print(xrds1_interpolated)'''
 
 if __name__ == '__main__':
-    xrds1 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
+    '''xrds1 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
     xrds2 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
-    interpolate(xrds1, xrds2)
+    xrds1_interp = interpolate(xrds1, xrds2)
+    savename = '/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc'
+    print(f'saving to... {savename}')
+    xrds1_interp.to_netcdf(savename)
+    print('saving complete')'''
+
+    cdf_merge(files_path = '/dx02/siw2111/ERA-5/unmerged/*.nc', savename ='/dx02/siw2111/ERA-5/ERA-5_T.nc', concat_dim = 'valid_time', variable = 't')
+
+
+    
