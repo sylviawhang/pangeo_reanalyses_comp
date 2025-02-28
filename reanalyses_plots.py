@@ -122,19 +122,7 @@ def plot_zonal_means(xrds, savename, lat, lon, lev, time, variable, title):
 def plot_annual(xrds, lon, lat, lev, time, variable, savename):
     annual_xrds = annual_zonal_mean(xrds, lon, time, variable, '')
     
-    #annual_xrds[variable] = annual_xrds[variable].bfill(dim=lev)  # Backward fill along pressure level
-    #annual_xrds[variable] = annual_xrds[variable].ffill(dim=lat)
-    #annual_xrds[variable] = annual_xrds[variable].bfill(dim=lat)  # Backward fill along pressure level
-
-    print(annual_xrds)
-    print(annual_xrds.variables[variable].values)
-    
-    #custom color map and boundaries
     boundaries = [180, 190, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
-    #custom_colors = ['deeppink','mediumvioletred', 'darkmagenta', 'rebeccapurple', 'indigo', 'darkslateblue', 'royalblue', 'cornflowerblue', 'deepskyblue', 'darkturquoise', 'mediumseagreen', 'seagreen', 'yellow', 'gold', 'orange', 'darkorange', 'orangered' , 'red', 'firebrick', 'darkred']
-    #custom_cmap = ListedColormap(custom_colors)
-    #norm = BoundaryNorm(boundaries, custom_cmap.N)
-    
     plt.figure(figsize = (12,6), layout = 'constrained')
     xr.plot.contourf(annual_xrds[variable],
             x = lat,
@@ -175,14 +163,6 @@ def plot_annual(xrds, lon, lat, lev, time, variable, savename):
     plt.savefig(savename, dpi = 300)
 
 if __name__ == '__main__':
-    # plot MERRA2
-    '''file = '/dx02/siw2111/MERRA-2/MERRA2_100.instM_3d_asm_Np.198001.nc4' # dummy
-    savename = '/home/siw2111/reanalyses_plots/02-06-2025/seasonal_zonal_temp_MERRA2_0206.png'
-    print(f'reading... {file}')
-    xrds = xr.open_dataset(file, chunks = 'auto')
-    plot_zonal_means(xrds, savename, lat = 'lat', lon = 'lon', lev ='lev', time = 'time', variable = 'T', title = 'MERRA-2')
-    xrds = xrds.close()'''
-
     xrds = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     xrds = xrds.sortby('time')
     print(xrds)

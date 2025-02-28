@@ -6,7 +6,7 @@ from ncf_funct import cdf_merge, replace_coordinate, sort_coordinate, interpolat
 
 def global_mean_monthly(xrds, lat, lon, time, variable):
     xrds = xrds[[variable]]
-    xrds = xrds.mean(dim = [lat, lon])
+    xrds = xrds.mean(dim = [lat, lon]) # fix this ** need weighted area mean
     xrds = xrds.groupby(f'{time}'.month).mean(time) # take global monthly mean
     print(xrds)
     return xrds
@@ -49,10 +49,7 @@ def plot(xrds, savename, variable, lat, lon, lev, time):
     plt.savefig(savename, dpi = 300)
 
 def rem(era5, merra2, jra55):
-    # JRA55 is already interpolated to ERA5 grid 
-    # assume ERA5 and MERRA2 are on common grid
-    # select common times and pressure levels
-    # select commmon time
+    # in progress... need to interpolate to common grid
     common_time = np.intersect1d(jra55['initial_time0_hours'], merra2['time'])
     era5 = era5.sel(valid_time = common_time)
     merra2 = merra2.sel(time = common_time)
@@ -82,8 +79,6 @@ if __name__ == '__main__':
     era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc')
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4')
     rem(era5, merra2, jra55)
-    #xrds = sort_coordinate(xrds)
-    #xrds = interpolate(xrds)
     
     '''xrds = cdf_merge(files_path = '/dx02/siw2111/ERA-5/unmerged/*.nc', concat_dim = 'valid_time', variable = 't')
     xrds = xrds.sel(pressure_level = slice(1000,1))

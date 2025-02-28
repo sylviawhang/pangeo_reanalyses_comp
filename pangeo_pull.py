@@ -54,7 +54,6 @@ def group_year(xrds, time, lat, lon, model = True): # pre-process data for each 
     print('mean over year, latitude, longitude...')
     xrds = xrds.groupby(f'{time}.year').mean()
     xrds = xrds.mean(dim = [lon, lat])
-    #xrds = xrds.drop_dims('dcpp_init_year') this is problematic -- drops dims and all variables associated with them i.e, temperature
     if model:
         xrds = xrds.sel(member_id = 'r10i1p1f1')
     xrds = xrds.sel(year = slice(1980,2024))
@@ -63,7 +62,7 @@ def group_year(xrds, time, lat, lon, model = True): # pre-process data for each 
 
 def trend_plot():
     #cesm2
-    cesm2 = pangeo_pull('CESM2', 'NCAR') # pull down from pangeo 
+    cesm2 = pangeo_pull('CESM2', 'NCAR') # pull from from pangeo
     plev = cesm2.coords['plev'].values
     cesm2 = cesm2.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
     cesm2_10 = group_year(cesm2.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude
@@ -71,7 +70,7 @@ def trend_plot():
     cesm2.close()
     
     #nasa giss
-    gisse21g = pangeo_pull('GISS-E2-1-G', 'NASA-GISS') # pull down from pangeo 
+    gisse21g = pangeo_pull('GISS-E2-1-G', 'NASA-GISS') # pull from pangeo 
     plev = gisse21g.coords['plev'].values
     gisse21g = gisse21g.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
     gisse21g_10 = group_year(gisse21g.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude

@@ -4,8 +4,8 @@ from scipy.interpolate import interp1d
 
 # net cdf functions 
 
-def cdf_merge(files_path = '/dx02/siw2111/JRA-55/*.nc', savename = '/dx02/siw2111/JRA-55/JRA-55_T.nc', concat_dim = 
-              'initial_time0_hours', variable = 'TMP_GDS4_HYBL_S123'):
+def cdf_merge(files_path, savename,  concat_dim,  variable):
+    # ex. files path \home\data\*.nc
     print(f'merging files... {files_path}')
     xrds = xr.open_mfdataset(files_path, combine = 'nested', concat_dim = concat_dim, chunks = 'auto')
     xrds = xrds[[variable]] # select temperature
@@ -62,16 +62,6 @@ def interpolate(xrds1, xrds2):
     print(xrds1_interp)
 
     return xrds1_interp
-    
-    
-    '''xrds1_levs = xrds1_interp['lv_HYBL1']
-    xrds1_temperature = xrds1_interp['TMP_GDS4_HYBL_S123']
-    xrds2_levs = xrds2['pressure_level']
-
-    interp_func = interp1d(xrds1_levs, xrds1_temperature, axis=1, bounds_error=False, fill_value="extrapolate")
-    interp_temp = interp_func(xrds2_levs)
-    xrds1_interpolated = xr.DataArray(interp_temp, dims=xrds1_interp['TMP_GDS4_HYBL_S123'].dims, coords=xrds1_interp.coords)
-    print(xrds1_interpolated)'''
 
 if __name__ == '__main__':
     '''xrds1 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
@@ -81,8 +71,5 @@ if __name__ == '__main__':
     print(f'saving to... {savename}')
     xrds1_interp.to_netcdf(savename)
     print('saving complete')'''
-
-    cdf_merge(files_path = '/dx02/siw2111/ERA-5/unmerged/*.nc', savename ='/dx02/siw2111/ERA-5/ERA-5_T.nc', concat_dim = 'valid_time', variable = 't')
-
 
     
