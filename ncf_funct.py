@@ -35,6 +35,16 @@ def replace_coordinate(xrds):
 
     return xrds
 
+def area_weighted_mean(xrds, lat, lon):
+    # create weights
+    weights = np.cos(np.deg2rad(f'xrds.{lat}'))
+    weights.name = "weights"
+    
+    # take weighted mean
+    xrds_weighted = xrds.weighted(weights)
+    weighted_mean = xrds_weighted.mean(dims = [lat, lon])
+    return weighted_mean
+
 def interpolate(xrds1, xrds2):
     # interpolate xrds1 dimension to match xrds2
     # xrds1 = JRA-55, xrds2 = ERA5, dimension = pressure
