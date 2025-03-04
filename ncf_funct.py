@@ -4,7 +4,7 @@ from scipy.interpolate import interp1d
 
 # net cdf functions 
 
-def cdf_merge(files_path, savename,  concat_dim,  variable):
+def cdf_merge(files_path, savename, concat_dim,  variable):
     # ex. files path \home\data\*.nc
     print(f'merging files... {files_path}')
     xrds = xr.open_mfdataset(files_path, combine = 'nested', concat_dim = concat_dim, chunks = 'auto')
@@ -37,12 +37,12 @@ def replace_coordinate(xrds):
 
 def area_weighted_mean(xrds, lat, lon):
     # create weights
-    weights = np.cos(np.deg2rad(f'xrds.{lat}'))
+    weights = np.cos(np.deg2rad(xrds[lat]))
     weights.name = "weights"
     
     # take weighted mean
     xrds_weighted = xrds.weighted(weights)
-    weighted_mean = xrds_weighted.mean(dims = [lat, lon])
+    weighted_mean = xrds_weighted.mean(dim = [lat, lon])
     return weighted_mean
 
 def interpolate(xrds1, xrds2):

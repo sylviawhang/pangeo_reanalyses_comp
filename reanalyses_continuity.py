@@ -2,7 +2,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 import numpy as np
-from ncf_funct import cdf_merge, replace_coordinate, sort_coordinate, interpolate
+from ncf_funct import cdf_merge, replace_coordinate, sort_coordinate, interpolate, area_weighted_mean
 
 def global_mean_monthly(xrds, lat, lon, time, variable):
     xrds = xrds[[variable]]
@@ -17,7 +17,7 @@ def plot(xrds, savename, variable, lat, lon, lev, time):
     # find temperature anomaly at each pressure level from monthly climatological mean
     xrds = xrds[[variable]]
     xrds[variable] = xrds[variable]- 273  # convert K to celcius
-    xrds = xrds.mean(dim = [lat, lon]).groupby(f'{time}.month')
+    xrds = area_weighted_mean(xrds, lat, lon).groupby(f'{time}.month')
     xrds_clim_mean = xrds.mean(time)
     print(xrds_clim_mean)
     xrds_anom = xrds- xrds_clim_mean
@@ -44,7 +44,7 @@ def plot(xrds, savename, variable, lat, lon, lev, time):
                         figsize = (12,4))
     plt.xlabel('time, YYYY')
     plt.ylabel('pressure, hpa')
-    plt.title ('ERA5 Global-mean Temperature Anomaly')
+    plt.title ('ERA-5 Global-mean Temperature Anomaly')
     print(f'saving to... {savename}')
     plt.savefig(savename, dpi = 300)
 
@@ -75,13 +75,22 @@ def rem(era5, merra2, jra55):
     return rem
 
 if __name__ == '__main__':
-    jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc', chunks = 'auto')
+    '''jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc', chunks = 'auto')
     era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc')
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4')
-    rem(era5, merra2, jra55)
+    rem(era5, merra2, jra55)'''
     
-    '''xrds = cdf_merge(files_path = '/dx02/siw2111/ERA-5/unmerged/*.nc', concat_dim = 'valid_time', variable = 't')
+    #xrds = cdf_merge(files_path = '/dx02/siw2111/ERA-5/unmerged/*.nc', savename = '', concat_dim = 'valid_time', variable = 't')
+    xrds = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
     xrds = xrds.sel(pressure_level = slice(1000,1))
-    xrds = xrds.sel(valid_time = slice('1980-01-01','2014-01-01'))
-    savename = '/home/siw2111/reanalyses_plots/02-25-2025/ERA5_anomaly_1980-2014.png'
-    plot(xrds, savename, variable = 't', lon = 'longitude', lat = 'latitude', lev = 'pressure_level', time = 'valid_time')'''
+    xrds = xrds.sel(valid_time = slice('1980-01-01','2024-01-01'))
+    savename = '/home/siw2111/cmip6_reanalyses_comp/reanalyses_plots/03-03-2025/ERA5_anomaly_1980-2024.png'
+    plot(xrds, savename, variable = 't', lon = 'longitude', lat = 'latitude', lev = 'pressure_level', time = 'valid_time')
+
+    '''
+    xrds = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc', chunks = 'auto' )
+    #xrds = xrds.sortby('time')
+    xrds = xrds.sel(pressure_level = slice(1000, 1))
+    xrds = xrds.sel(initial_time0_hours = slice('1980-01-01', '2024-01-01') )
+    savename = '/home/siw2111/cmip6_reanalyses_comp/reanalyses_plots/03-03-2025/JRA55_anomaly_1980-2024.png'
+    plot(xrds, savename, variable = 'TMP_GDS4_HYBL_S123', lon = 'longitude', lat = 'latitude', lev = 'pressure_level', time = 'initial_time0_hours')'''

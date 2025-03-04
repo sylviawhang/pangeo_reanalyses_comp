@@ -5,12 +5,13 @@ import xarray as xr
 from matplotlib import pyplot as plt
 import numpy as np
 from reanalyses_plots import plot_annual
-from ncf_funct import sort_coordinate, interpolate, cdf_merge
+from ncf_funct import sort_coordinate, interpolate, cdf_merge, area_weighted_mean
+import statistics
 
 '''cat = open_catalog("https://raw.githubusercontent.com/pangeo-data/pangeo-datastore/master/intake-catalogs/climate.yaml")
 print(cat.walk(depth = 4))'''
 
-def pangeo_pull(source_id, institution_id, variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon'):
+def pangeo_pull(source_id = '', institution_id = '', variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon', dict = False):
 # Load the catalog
     url = 'https://storage.googleapis.com/cmip6/pangeo-cmip6.json'
     print(url)
@@ -22,8 +23,8 @@ def pangeo_pull(source_id, institution_id, variable_id = 'ta', experiment_id = '
         variable_id = variable_id,
         grid_label = grid_label,
         table_id = table_id,
-        source_id = source_id,
-        institution_id = institution_id
+        #source_id = source_id,
+        #institution_id = institution_id
     )
     print(cat_subset)
     print(cat_subset.df.head())
@@ -40,6 +41,9 @@ def pangeo_pull(source_id, institution_id, variable_id = 'ta', experiment_id = '
     print(dset_dict)
     print(f' number of files: {len(dset_dict)}')
     
+    if dict:
+        return dset_dict
+    
     name = f'CMIP.{institution_id}.{source_id}.{experiment_id}.{table_id}.{grid_label}'
     print(name)
     xrds = dset_dict[name]
@@ -53,32 +57,40 @@ def pangeo_pull(source_id, institution_id, variable_id = 'ta', experiment_id = '
 def group_year(xrds, time, lat, lon, model = True): # pre-process data for each pressure level
     print('mean over year, latitude, longitude...')
     xrds = xrds.groupby(f'{time}.year').mean()
-    xrds = xrds.mean(dim = [lon, lat])
+    xrds = area_weighted_mean(xrds, lat, lon)
     if model:
         xrds = xrds.sel(member_id = 'r10i1p1f1')
-    xrds = xrds.sel(year = slice(1980,2024))
+    #xrds = xrds.sel(year = slice(1980,2024))
     print(xrds)
     return xrds
 
-def trend_plot():
-    #cesm2
-    cesm2 = pangeo_pull('CESM2', 'NCAR') # pull from from pangeo
-    plev = cesm2.coords['plev'].values
-    cesm2 = cesm2.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
-    cesm2_10 = group_year(cesm2.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude
-    xr.plot.line(cesm2_10['ta'], x = 'year', label = 'CESM2', color = 'orange')
-    cesm2.close()
+def trend_plot_2():
+    # get models (start with 10)
+    model_dict = pangeo_pull( variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon', dict = True)
+    i = 0
+    for key, value in model_dict.items():
+        if i >10:
+            break
+        name = key.split('.')[2]
+        print(name)
+        xr.plot.line(value['ta'], x = 'year', label = name)
+        i +=1
     
-    #nasa giss
-    gisse21g = pangeo_pull('GISS-E2-1-G', 'NASA-GISS') # pull from pangeo 
-    plev = gisse21g.coords['plev'].values
-    gisse21g = gisse21g.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
-    gisse21g_10 = group_year(gisse21g.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude
-    xr.plot.line(gisse21g_10['ta'], x = 'year', label = 'GISS-E2-1G', color = 'dodgerblue')
-    gisse21g.close()
 
-    #era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
-    era5 = cdf_merge('/dx02/siw2111/ERA-5/unmerged/*.nc', concat_dim = 'valid_time', variable = 't')
+    # average reanalyses
+    era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
+    era5_10 = group_year(era5.sel(pressure_level = 1e+01), time = 'valid_time', lon = 'longitude', lat = 'latitude', model = False)
+    merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    merra2 = sort_coordinate(merra2) # sort time
+    merra2_10 = group_year(merra2.sel(lev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = False)
+    jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
+    jra55 = interpolate(jra55, era5)
+    jra55_10 = group_year(jra55.sel(pressure_level = 1e+01), time = 'initial_time0_hours', lon = 'longitude', lat = 'latitude', model = False)
+
+    rem_10 = (era5_10 + merra2_10 + jra55_10)/3
+    #cesm2
+
+    era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
     era5_10 = group_year(era5.sel(pressure_level = 1e+01), time = 'valid_time', lon = 'longitude', lat = 'latitude', model = False)
     print(era5_10.variables['t'].values)
     xr.plot.line(era5_10['t'], x = 'year', label = 'ERA5', color = 'green')
@@ -100,8 +112,52 @@ def trend_plot():
     plt.legend()
     plt.xlabel('time YYYY')
     plt.ylabel('temperature K')
-    plt.xlim(1980,2014)
-    savename = '/home/siw2111/model_plots/2model_3obs_1980-2024.png'
+    plt.xlim(1850,2014)
+    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-03-2025/2model_3obs_1850-2024.png'
+    print(f'saving to...{savename}')
+    plt.savefig(savename, dpi = 300)
+
+def trend_plot():
+    #cesm2
+    cesm2 = pangeo_pull('CESM2', 'NCAR') # pull from from pangeo
+    plev = cesm2.coords['plev'].values
+    cesm2 = cesm2.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
+    cesm2_10 = group_year(cesm2.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude
+    xr.plot.line(cesm2_10['ta'], x = 'year', label = 'CESM2', color = 'orange')
+    cesm2.close()
+    
+    #nasa giss
+    gisse21g = pangeo_pull('GISS-E2-1-G', 'NASA-GISS') # pull from pangeo 
+    plev = gisse21g.coords['plev'].values
+    gisse21g = gisse21g.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
+    gisse21g_10 = group_year(gisse21g.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude
+    xr.plot.line(gisse21g_10['ta'], x = 'year', label = 'GISS-E2-1G', color = 'dodgerblue')
+    gisse21g.close()
+
+    era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
+    era5_10 = group_year(era5.sel(pressure_level = 1e+01), time = 'valid_time', lon = 'longitude', lat = 'latitude', model = False)
+    print(era5_10.variables['t'].values)
+    xr.plot.line(era5_10['t'], x = 'year', label = 'ERA5', color = 'green')
+    era5.close()
+
+    merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    merra2 = sort_coordinate(merra2) # sort time
+    merra2_10 = group_year(merra2.sel(lev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = False)
+    xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2', color = 'darkblue')
+    merra2.close()
+
+    jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
+    jra55 = interpolate(jra55, era5)
+    jra55_10 = group_year(jra55.sel(pressure_level = 1e+01), time = 'initial_time0_hours', lon = 'longitude', lat = 'latitude', model = False)
+    xr.plot.line(jra55_10['TMP_GDS4_HYBL_S123'], x = 'year', label = 'JRA55', color = 'red')
+    jra55.close()
+
+    plt.title('Temperature as a Function of Time at 10hpa')
+    plt.legend()
+    plt.xlabel('time YYYY')
+    plt.ylabel('temperature K')
+    plt.xlim(1850,2014)
+    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-03-2025/2model_3obs_1850-2024.png'
     print(f'saving to...{savename}')
     plt.savefig(savename, dpi = 300)
 
@@ -122,10 +178,17 @@ def plot_climatology(xrds, savename):
                 variable = 'ta')
 
 if __name__ == '__main__':
-    #pangeo_pull(source_id = 'GISS-E2-1-G', institution_id = 'NASA-GISS')
+    model_dict = pangeo_pull( variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon', dict = True)
+    i = 0
+    for key, value in model_dict.items():
+        if i >10:
+            break
+        print(key.split('.'))[2]
+        print(value)
+        i +=1
     #trend_plot()
-    xrds = pangeo_pull(source_id = 'CESM2', institution_id = 'NCAR')
+    '''xrds = pangeo_pull(source_id = 'CESM2', institution_id = 'NCAR')
     savename = '/home/siw2111/model_plots/CEMS2_climatology_2004-2014_1.png'
-    plot_climatology(xrds, savename)
+    plot_climatology(xrds, savename)'''
 
 
