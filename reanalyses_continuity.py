@@ -50,6 +50,8 @@ def plot(xrds, savename, variable, lat, lon, lev, time):
 
 def rem(era5, merra2, jra55):
     # in progress... need to interpolate to common grid
+    
+    # select common time
     common_time = np.intersect1d(jra55['initial_time0_hours'], merra2['time'])
     era5 = era5.sel(valid_time = common_time)
     merra2 = merra2.sel(time = common_time)
@@ -61,6 +63,8 @@ def rem(era5, merra2, jra55):
     merra2 = merra2.sel(lev = common_lev)
     jra55 = jra55.sel(pressure_level = common_lev)
 
+    # adjust gridding
+    
     jra55 = jra55.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'initial_time0_hours': 'time', 'TMP_GDS4_HYBL_S123':'ta'})
     era5 = era5.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})
     merra2 = merra2.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})

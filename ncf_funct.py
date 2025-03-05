@@ -45,6 +45,23 @@ def area_weighted_mean(xrds, lat, lon):
     weighted_mean = xrds_weighted.mean(dim = [lat, lon])
     return weighted_mean
 
+def interpolate_grid(xrds1, xrds2):
+    # assume all datasets have the same coordinate names
+    print(f'interpolating {xrds1} to {xrds2} grid')
+    xrds2_lat = xrds2['lat']
+    xrds2_lon = xrds2['lon']
+    xrds1_interp = xrds1.interp(lat = xrds2_lat, lon = xrds2_lon)
+    print(xrds2)
+    print(xrds1_interp)
+    return xrds1_interp
+
+def interpolate_plev(xrds1, xrds2):
+    print('interpolating to common pressure levels...')
+    xrds2_plev = xrds2['plev']
+    xrds1_interp = xrds1.interp(plev = xrds2_plev)
+    print(xrds1_interp)
+    return xrds1_interp
+
 def interpolate(xrds1, xrds2):
     # interpolate xrds1 dimension to match xrds2
     # xrds1 = JRA-55, xrds2 = ERA5, dimension = pressure
@@ -74,12 +91,16 @@ def interpolate(xrds1, xrds2):
     return xrds1_interp
 
 if __name__ == '__main__':
-    '''xrds1 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
-    xrds2 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
-    xrds1_interp = interpolate(xrds1, xrds2)
-    savename = '/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc'
-    print(f'saving to... {savename}')
-    xrds1_interp.to_netcdf(savename)
-    print('saving complete')'''
+    merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
+    
+    era5 = era5.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})
+    merra2 = merra2.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
+    
+    lon = merra2.coords['lon'].values
+    merra2 = merra2.assign_coords(lon = np.add(lon,180)) 
+    print(merra2)
 
+    merra2 = interpolate_grid(merra2, era5)
+    
     
