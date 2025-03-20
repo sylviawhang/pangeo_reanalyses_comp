@@ -2,7 +2,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 import numpy as np
-from ncf_funct import cdf_merge, replace_coordinate, sort_coordinate, interpolate, area_weighted_mean
+from ncf_funct import cdf_merge, replace_coordinate, sort_coordinate, interpolate, area_weighted_mean, concat_era
 
 def global_mean_monthly(xrds, lat, lon, time, variable):
     xrds = xrds[[variable]]
@@ -44,7 +44,7 @@ def plot(xrds, savename, variable, lat, lon, lev, time):
                         figsize = (12,4))
     plt.xlabel('time, YYYY')
     plt.ylabel('pressure, hpa')
-    plt.title ('ERA-5 Global-mean Temperature Anomaly')
+    plt.title ('ERA-5.1 Global-mean Temperature Anomaly')
     print(f'saving to... {savename}')
     plt.savefig(savename, dpi = 300)
 
@@ -85,10 +85,11 @@ if __name__ == '__main__':
     rem(era5, merra2, jra55)'''
     
     #xrds = cdf_merge(files_path = '/dx02/siw2111/ERA-5/unmerged/*.nc', savename = '', concat_dim = 'valid_time', variable = 't')
-    xrds = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
+    #xrds = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
+    xrds = concat_era()
     xrds = xrds.sel(pressure_level = slice(1000,1))
     xrds = xrds.sel(valid_time = slice('1980-01-01','2024-01-01'))
-    savename = '/home/siw2111/cmip6_reanalyses_comp/reanalyses_plots/03-03-2025/ERA5_anomaly_1980-2024.png'
+    savename = '/home/siw2111/cmip6_reanalyses_comp/reanalyses_plots/03-03-2025/ERA51_anomaly_1980-2024.png'
     plot(xrds, savename, variable = 't', lon = 'longitude', lat = 'latitude', lev = 'pressure_level', time = 'valid_time')
 
     '''

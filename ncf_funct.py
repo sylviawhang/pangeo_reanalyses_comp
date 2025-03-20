@@ -62,6 +62,18 @@ def interpolate_plev(xrds1, xrds2):
     print(xrds1_interp)
     return xrds1_interp
 
+def concat_era(era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto'), era51 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5.1/ERA5-1-gridded.nc', chunks = 'auto')):
+    # insert era5.1 2000-2006 data into era5
+    print(era51.coords['valid_time'].values)
+    era5_pre = era5.sel(valid_time = slice('1980-01-01', '1999-12-01'))
+    print(era5_pre)
+    era5_post = era5.sel(valid_time = slice('2006-02-01', '2024-01-01'))
+    print(era51)
+    print(era5_post)
+    era51_concat = xr.concat([era5_pre, era51, era5_post], dim = 'valid_time')
+    print(era51_concat)
+    return era51_concat
+
 def interpolate(xrds1, xrds2):
     # interpolate xrds1 dimension to match xrds2
     # xrds1 = JRA-55, xrds2 = ERA5, dimension = pressure
@@ -91,7 +103,7 @@ def interpolate(xrds1, xrds2):
     return xrds1_interp
 
 if __name__ == '__main__':
-    merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    '''merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
     
     era5 = era5.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})
@@ -101,6 +113,13 @@ if __name__ == '__main__':
     merra2 = merra2.assign_coords(lon = np.add(lon,180)) 
     print(merra2)
 
-    merra2 = interpolate_grid(merra2, era5)
+    merra2 = interpolate_grid(merra2, era5)'''
+
+    era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
+    era51 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5.1/ERA5-1-gridded.nc', chunks = 'auto')
+
+    concat_era(era5, era51)
+
+
     
     
