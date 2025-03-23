@@ -5,7 +5,7 @@ from ncf_funct import cdf_merge, replace_coordinate
 import colorcet as cc
 from reanalyses_plots import annual_zonal_mean, seasonal_zonal_mean, plot_annual
 from pangeo_pull import pangeo_pull
-import datetime
+from datetime import datetime
 
 
 # plots to compare model and reanalysis climatology
@@ -59,10 +59,10 @@ def load_models(source_id, institution_id):
 
 def plot_clim(data, savename):
     model, annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff = data
-    fig, axes = plt.subplots(nrows = 5, ncols = 3, figsize = (20, 30), 
+    fig, axes = plt.subplots(nrows = 5, ncols = 3, figsize = (28, 25), 
                              sharex = True, sharey = False, layout = 'constrained')
 
-    fig.suptitle(f'{model} Zonal Mean Temperature 1980-2024', fontsize = 20)
+    fig.suptitle('Zonal Mean Temperature in 1980-2024', fontsize = 30)
     
     # plot model
     boundaries = [180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
@@ -74,7 +74,7 @@ def plot_clim(data, savename):
             #cbar_kwargs= {'label':'Temperature, K', 'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
-            cmap= cc.cm.bmy,
+            cmap= cc.cm.rainbow4,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -95,7 +95,7 @@ def plot_clim(data, savename):
     annual_model.close()
 
     axes[0,0].set_ylabel('Pressure, hPa', fontsize = 15)
-    axes[0,0].set_title(f'{model} \nAnnual', fontsize = 15)
+    axes[0,0].set_title('\033[1m' +f'{model}' + '\033[1m' + '\nAnnual', fontsize = 15)
 
     #cbar = cf.colorbar  # Get the colorbar object
     #cbar.ax.tick_params(length=0)
@@ -110,7 +110,7 @@ def plot_clim(data, savename):
             #cbar_kwargs= {'label':'Temperature, K', 'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
-            cmap= cc.cm.rainbow,
+            cmap= cc.cm.rainbow4,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -167,7 +167,7 @@ def plot_clim(data, savename):
     plt.clabel(cs, cs.levels, fontsize=10)
     annual_rean.close()
 
-    axes[0,1].set_title('MERRA-2 \nAnnual', fontsize = 15)
+    axes[0,1].set_title('\033[1m' + 'MERRA-2' + '\033[1m' + '\nAnnual', fontsize = 15)
 
     cbar = cf.colorbar  # Get the colorbar object
     cbar.ax.tick_params(length=0)
@@ -182,7 +182,7 @@ def plot_clim(data, savename):
             cbar_kwargs= {'label':'Temperature, K', 'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
-            cmap= cc.cm.bgy,
+            cmap= cc.cm.rainbow4,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -210,7 +210,7 @@ def plot_clim(data, savename):
     axes[4,1].set_xlabel(f'Latitude, °N', fontsize = 15)
 
     # plot difference
-    boundaries = [-30, -25, -20, -18, -16, -14, -12, -10, -8, -6, -4, -2, -1, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 25, 30]
+    boundaries = [-50, -20,-14, -12, -10, -8, -6, -4, -2, -1, 1, 2, 4, 6, 8, 10, 12, 14,  20, 50]
     cf = xr.plot.contourf(annual_diff['ta'],
             x = 'lat',
             y = 'plev', 
@@ -219,7 +219,7 @@ def plot_clim(data, savename):
             cbar_kwargs= {'label':'Temperature Difference, K', 'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
-            cmap= cc.cm.diverging_protanopic_deuteranopic_bwy_60_95_c32,
+            cmap= cc.cm.CET_D9,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -238,7 +238,7 @@ def plot_clim(data, savename):
             ax = axes[0,2])
     plt.clabel(cs, cs.levels, fontsize=10)
     annual_diff.close()
-    axes[0,2].set_title('Difference \nAnnual', fontsize = 15)
+    axes[0,2].set_title('\033[1m' + 'Difference' + '\033[1m' + '\nAnnual', fontsize = 15)
 
     cbar = cf.colorbar  # Get the colorbar object
     cbar.ax.tick_params(length=0)
@@ -253,7 +253,7 @@ def plot_clim(data, savename):
             cbar_kwargs= {'label':'Temperature Difference, K', 'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
-            cmap= 'RdYlGu',
+            cmap= cc.cm.CET_D9,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -284,10 +284,15 @@ def plot_clim(data, savename):
     plt.savefig(savename, dpi = 400)
 
 if __name__ == '__main__':
+    start = datetime.now()
+    
     model = 'GISS-E2-1-G'
     institution = 'NASA-GISS'
 
     data = load_models(model, institution)
     savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/GISS-E2-1-G_plots_1980-2014_1.png'
     plot_clim(data, savename)
+    
+    end = datetime.now()
+    print(f'finished at {end}, runtime: {end - start}')
 
