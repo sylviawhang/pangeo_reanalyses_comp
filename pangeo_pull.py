@@ -14,49 +14,50 @@ print(cat.walk(depth = 4))'''
 def pangeo_pull(source_id = 'GISS-E2-1G', institution_id = 'NASA-GISS', variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon', dict = False):
 # Load the catalog
     url = 'https://storage.googleapis.com/cmip6/pangeo-cmip6.json'
-    print(url)
+    #print(url)
     cat = intake.open_esm_datastore(url, progressbar = True) # cat = catalogue
-    print(cat)
-    print(cat.df.head())
+    #print(cat)
+    #print(cat.df.head())
     cat_subset = cat.search(
         experiment_id = experiment_id,
         variable_id = variable_id,
         grid_label = grid_label,
         table_id = table_id,
-        #source_id = source_id,
+        source_id = source_id,
         #institution_id = institution_id, 
         member_id = 'r1i1p1f1'
     )
-    print(cat_subset)
-    print(cat_subset.df.head())
+    #print(cat_subset)
+    #print(cat_subset.df.head())
     unique = cat_subset.unique()
-    print(unique) # prints unique parameters among the datasets
-    print(unique['source_id'])
+    #print(unique) # prints unique parameters among the datasets
+    #print(unique['source_id'])
 
-    # bug -- filter out models
+    '''# bug -- filter out models
     sources = unique['source_id']
-    print(type(sources))
     sources.remove('CESM2-WACCM-FV2')
     sources.remove('ICON-ESM-LR')
-    print(sources)
+    #print(sources)
     cat_subset = cat_subset.search(source_id = sources)
-    print(cat_subset.df.head())
+    #print(cat_subset.df.head())'''
 
     # convert to dictionary of xarray datasets. 
     cat.esmcat.aggregation_control
     dset_dict = cat_subset.to_dataset_dict(
         xarray_open_kwargs={"consolidated": True, "decode_times": True, "use_cftime": True}
     )
-    #print(dset_dict)
+    print(dset_dict)
     print(f' number of files: {len(dset_dict)}')
     
     if dict:
         return dset_dict
     
-    name = f'CMIP.{institution_id}.{source_id}.{experiment_id}.{table_id}.{grid_label}'
+    #name = f'CMIP.{institution_id}.{source_id}.{experiment_id}.{table_id}.{grid_label}'
+    
+    name = list(dset_dict.keys())[0]
     print(name)
     xrds = dset_dict[name]
-    
+
     print(xrds)
     return(xrds)
 

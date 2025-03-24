@@ -17,7 +17,7 @@ def load_models(source_id, institution_id):
     model_xrds =model_xrds.sel(time = slice('1980-01-01', '2014-12-01'))
     model_xrds = model_xrds.sel(member_id = 'r1i1p1f1')
     plev = model_xrds.coords['plev'].values
-    model_xrds = model_xrds.assign_coords(plev  = np.divide(plev,100))
+    model_xrds = model_xrds.assign_coords(plev  = np.divide(plev,100).round(2))
     model_xrds = model_xrds.sel(plev = slice(1000,1))
     model_xrds = model_xrds.mean(dim = ['dcpp_init_year'])
 
@@ -42,30 +42,29 @@ def load_models(source_id, institution_id):
     seasonal_rean = seasonal_rean.sel(plev = common_plev)
     seasonal_model = seasonal_model.sel(plev = common_plev)
 
-
     # interpolate to common latitude grid
     model_lat = annual_model['lat']
     annual_rean = annual_rean.interp(lat = model_lat)
     seasonal_rean = seasonal_rean.interp(lat = model_lat)
 
+    # take difference
     annual_diff = annual_model - annual_rean
     seasonal_diff = seasonal_model - seasonal_rean
 
     maximum = max(float(annual_diff['ta'].max()), float(seasonal_diff['ta'].max()))
     minimum = max(float(annual_diff['ta'].min()), float(seasonal_diff['ta'].min()))
-    
     print(f'maximum difference: {maximum} \n minimum difference: {minimum}')
 
     data = (source_id, annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff)
 
-    return data
+    return data, maximum, minimum
 
 def plot_clim(data, savename):
     model, annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff = data
     fig, axes = plt.subplots(nrows = 5, ncols = 3, figsize = (25, 20), 
                              sharex = True, sharey = False, layout = 'constrained')
 
-    fig.suptitle(f' {model} Zonal Mean Temperature in 1980-2024', fontsize = 20)
+    fig.suptitle(f' {model} Zonal Mean Temperature in 1980-2014', fontsize = 20)
     
     # plot model
     boundaries = [180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
@@ -288,36 +287,36 @@ def plot_clim(data, savename):
     plt.savefig(savename, dpi = 400)
 
 if __name__ == '__main__':
-    model_li = ['ACCESS-CM2', 'AWI-CM-1-1-MR' , 'CESM2-WACCM', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0']
+    '''model_li = ['ACCESS-CM2', 'AWI-CM-1-1-MR' , 'CESM2-WACCM', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0']
     
     for model in model_li:
         print(f'plotting... {model} -----------------------------------------------')
         try:
             start = datetime.now()
         
-            model = 'GISS-E2-1-G'
+            #model = 'GISS-E2-1-G'
             #institution = 'NASA-GISS'
 
-            data = load_models(model, institution = '')
-            savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/{model}_plots_1980-2014.png'
+            data, maximum, minimum = load_models(model, '')
+            savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/{model}_plots_1980-2014_{maximum}{minimum}.png'
             plot_clim(data, savename)
-        
+            
             end = datetime.now()
             print(f'{model} finished at {end}, runtime: {end - start}')
         except:
             print(f'error: unable to plot {model}')
-            continue
+            continue'''
     
     
-    '''start = datetime.now()
+    start = datetime.now()
     
-    model = 'GISS-E2-1-G'
-    institution = 'NASA-GISS'
+    model = 'ACCESS-CM2'
+    institution = ''
 
-    data = load_models(model, institution)
-    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/GISS-E2-1-G_plots_1980-2014_1.png'
+    data, maximum, minimum = load_models(model, institution)
+    savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/{model}_plots_1980-2014_{maximum}{minimum}.png'
     plot_clim(data, savename)
     
     end = datetime.now()
-    print(f'finished at {end}, runtime: {end - start}')'''
+    print(f'finished at {end}, runtime: {end - start}')
 

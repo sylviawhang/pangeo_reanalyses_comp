@@ -19,14 +19,14 @@ Ozone:         'o3'               'O3'                       '''
 def annual_zonal_mean(xrds, lon, time, variable):
     xrds = xrds[[variable]]
     zonal_mean_xrds = xrds.mean(dim = [lon, time])
-    print(zonal_mean_xrds)
+    #print(zonal_mean_xrds)
     return zonal_mean_xrds
 
 def seasonal_zonal_mean(xrds, lon, time, variable):
     xrds = xrds[[variable]]
     seasonal_xrds = xrds.groupby(f"{time}.season").mean(time)
     seasonal_xrds = seasonal_xrds.mean(dim = [lon])
-    print(seasonal_xrds)
+    #print(seasonal_xrds)
     return seasonal_xrds
 
 def plot_zonal_means(xrds, savename, lat, lon, lev, time, variable, title):
