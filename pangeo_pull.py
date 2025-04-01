@@ -14,24 +14,23 @@ print(cat.walk(depth = 4))'''
 def pangeo_pull(source_id = 'GISS-E2-1G', institution_id = 'NASA-GISS', variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon', dict = False):
 # Load the catalog
     url = 'https://storage.googleapis.com/cmip6/pangeo-cmip6.json'
-    #print(url)
+    print(url)
     cat = intake.open_esm_datastore(url, progressbar = True) # cat = catalogue
-    #print(cat)
-    #print(cat.df.head())
+    print(cat)
     cat_subset = cat.search(
         experiment_id = experiment_id,
         variable_id = variable_id,
-        grid_label = grid_label,
+        #grid_label = grid_label,
         table_id = table_id,
         source_id = source_id,
         #institution_id = institution_id, 
         member_id = 'r1i1p1f1'
     )
-    #print(cat_subset)
-    #print(cat_subset.df.head())
+    print(cat_subset)
+    print(cat_subset.df.head())
     unique = cat_subset.unique()
-    #print(unique) # prints unique parameters among the datasets
-    #print(unique['source_id'])
+    print(unique) # prints unique parameters among the datasets
+    print(unique['source_id'])
 
     '''# bug -- filter out models
     sources = unique['source_id']
@@ -68,7 +67,7 @@ def group_year(xrds, time, lat, lon, model = True): # pre-process data for each 
     xrds = area_weighted_mean(xrds, lat, lon)
     if model:
         xrds = xrds.sel(member_id = 'r1i1p1f1')
-    xrds = xrds.sel(year = slice(1980,2014))
+    #xrds = xrds.sel(year = slice(1980,2014))
     print(xrds)
     return xrds
 
@@ -105,52 +104,53 @@ def trend_plot_2():
     plt.xlabel('time YYYY')
     plt.ylabel('temperature K')
     plt.xlim(1850,2014)
-    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-03-2025/40model_3obs_1850-2014.png'
+    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-03-2025/40model_3obs_1850-2014_.png'
     print(f'saving to...{savename}')
     plt.savefig(savename, dpi = 300)
 
 def trend_plot():
-    #cesm2
-    cesm2 = pangeo_pull('CESM2', 'NCAR') # pull from from pangeo
-    plev = cesm2.coords['plev'].values
-    cesm2 = cesm2.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
-    cesm2_10 = group_year(cesm2.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude
-    xr.plot.line(cesm2_10['ta'], x = 'year', label = 'CESM2', color = 'orange')
-    cesm2.close()
+    # set color map
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    number_models = 17
+    colormap = plt.cm.nipy_spectral
+    colors = colormap(np.linspace(0, 1, number_models))
+    ax.set_prop_cycle('color', colors) 
     
-    #nasa giss
-    gisse21g = pangeo_pull('GISS-E2-1-G', 'NASA-GISS') # pull from pangeo 
-    plev = gisse21g.coords['plev'].values
-    gisse21g = gisse21g.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
-    gisse21g_10 = group_year(gisse21g.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True) # annual mean, mean over latitude, longitude
-    xr.plot.line(gisse21g_10['ta'], x = 'year', label = 'GISS-E2-1G', color = 'dodgerblue')
-    gisse21g.close()
+    #models
+    model_li = ['ACCESS-CM2', 'AWI-CM-1-1-MR' , 'CESM2-WACCM', 'GISS-E2-1-G', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0', 'E3SM-1-1', 'EC-Earth3','EC-Earth3-CC', 'EC-Earth3-Veg', 'INM-CM5-0', 'IPSL-CM6A-LR' , 'KACE-1-0-G']
+    for id in model_li:
+        print(f'plotting {id}----------------------------------')
+        model = pangeo_pull(id, '')
+        plev = model.coords['plev'].values
+        model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
+        model_10 = group_year(model.sel(plev = 1e+03), time = 'time', lon = 'lon', lat = 'lat') # annual mean, mean over latitude, longitude
+        ax.plot(model_10['year'], model_10['ta'], label = id, linewidth = 0.7)
+        model.close()
 
-    #era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
     era5 = concat_era()
-    era5_10 = group_year(era5.sel(pressure_level = 1e+01), time = 'valid_time', lon = 'longitude', lat = 'latitude', model = False)
+    era5_10 = group_year(era5.sel(pressure_level = 1e+03), time = 'valid_time', lon = 'longitude', lat = 'latitude', model = False)
     print(era5_10.variables['t'].values)
-    xr.plot.line(era5_10['t'], x = 'year', label = 'ERA5.1', color = 'green')
+    xr.plot.line(era5_10['t'], x = 'year', label = 'ERA5.1', color = 'lightgray', linewidth = 0.7)
     era5.close()
 
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     merra2 = sort_coordinate(merra2) # sort time
-    merra2_10 = group_year(merra2.sel(lev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = False)
-    xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2', color = 'darkblue')
+    merra2_10 = group_year(merra2.sel(lev = 1e+03), time = 'time', lon = 'lon', lat = 'lat', model = False)
+    xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2', color = 'k', linewidth = 0.7)
     merra2.close()
 
     jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc', chunks = 'auto')
-    #jra55 = interpolate(jra55, era5)
-    jra55_10 = group_year(jra55.sel(pressure_level = 1e+01), time = 'initial_time0_hours', lon = 'longitude', lat = 'latitude', model = False)
-    xr.plot.line(jra55_10['TMP_GDS4_HYBL_S123'], x = 'year', label = 'JRA55', color = 'red')
+    jra55_10 = group_year(jra55.sel(pressure_level = 1e+03), time = 'initial_time0_hours', lon = 'longitude', lat = 'latitude', model = False)
+    xr.plot.line(jra55_10['TMP_GDS4_HYBL_S123'], x = 'year', label = 'JRA55', color = 'grey', linewidth = 0.7)
     jra55.close()
 
-    plt.title('Temperature as a Function of Time at 10hpa')
+    plt.title('Temperature as a Function of Time at 1000hpa')
     plt.legend()
     plt.xlabel('time YYYY')
     plt.ylabel('temperature K')
     plt.xlim(1850,2014)
-    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-03-2025/2model_3obs_1850-2014_5-1.png'
+    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/temp-time_1000_1850-2014.png'
     print(f'saving to...{savename}')
     plt.savefig(savename, dpi = 300)
 
@@ -171,9 +171,9 @@ def plot_climatology(xrds, savename):
                 variable = 'ta')
 
 if __name__ == '__main__':
-    xrds = pangeo_pull(source_id = 'GISS-E2-1-G', institution_id = 'NASA-GISS')
-    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/GISS-E2-1-G_climatology_1980-2014_1.png'
-    plot_climatology(xrds, savename)
+    trend_plot()
+    #savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/GISS-E2-1-G_climatology_1980-2014_1.png'
+    #plot_climatology(xrds, savename)
 
 
 

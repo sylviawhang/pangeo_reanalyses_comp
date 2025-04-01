@@ -287,15 +287,12 @@ def plot_clim(data, savename):
     plt.savefig(savename, dpi = 400)
 
 if __name__ == '__main__':
-    '''model_li = ['ACCESS-CM2', 'AWI-CM-1-1-MR' , 'CESM2-WACCM', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0']
+    model_li = ['E3SM-1-1', 'EC-Earth3','EC-Earth3-CC', 'EC-Earth3-Veg', 'INM-CM5-0', 'IPSL-CM6A-LR' , 'KACE-1-0-G']
     
     for model in model_li:
         print(f'plotting... {model} -----------------------------------------------')
         try:
             start = datetime.now()
-        
-            #model = 'GISS-E2-1-G'
-            #institution = 'NASA-GISS'
 
             data, maximum, minimum = load_models(model, '')
             savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/{model}_plots_1980-2014_{maximum}{minimum}.png'
@@ -305,10 +302,10 @@ if __name__ == '__main__':
             print(f'{model} finished at {end}, runtime: {end - start}')
         except:
             print(f'error: unable to plot {model}')
-            continue'''
+            continue
     
     
-    start = datetime.now()
+    '''start = datetime.now()
     
     model = 'ACCESS-CM2'
     institution = ''
@@ -318,5 +315,5 @@ if __name__ == '__main__':
     plot_clim(data, savename)
     
     end = datetime.now()
-    print(f'finished at {end}, runtime: {end - start}')
+    print(f'finished at {end}, runtime: {end - start}')'''
 
