@@ -1,6 +1,7 @@
 import xarray as xr
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.signal import detrend
 
 # net cdf functions 
 
@@ -44,6 +45,23 @@ def area_weighted_mean(xrds, lat, lon):
     xrds_weighted = xrds.weighted(weights)
     weighted_mean = xrds_weighted.mean(dim = [lat, lon])
     return weighted_mean
+
+def detrend_funct(xrds):
+    detrended_temp = xr.apply_ufunc(
+    detrend, xrds['ta'],
+    kwargs={"axis": xrds['ta'].get_axis_num('time'), "type": "linear"},
+    dask="parallelized")
+    xrds['ta'] = detrended_temp
+    return xrds
+
+def detrend_model(xrds):
+    # split into 1980-1999, 2000-2014 to reduce ozone hole signal
+    xrds1 = detrend_funct(xrds.sel(time = slice('1980-01-01', '1999-12-01')))
+    xrds2 = detrend_funct(xrds.sel(time = slice('2000-01-01', '2014-12-01')))
+    # concatenate
+    detrended_xrds = xr.concat([xrds1, xrds2], dim = 'time')
+    
+    return detrended_xrds
 
 def interpolate_grid(xrds1, xrds2):
     # assume all datasets have the same coordinate names

@@ -32,14 +32,6 @@ def pangeo_pull(source_id = 'GISS-E2-1G', institution_id = 'NASA-GISS', variable
     print(unique) # prints unique parameters among the datasets
     print(unique['source_id'])
 
-    '''# bug -- filter out models
-    sources = unique['source_id']
-    sources.remove('CESM2-WACCM-FV2')
-    sources.remove('ICON-ESM-LR')
-    #print(sources)
-    cat_subset = cat_subset.search(source_id = sources)
-    #print(cat_subset.df.head())'''
-
     # convert to dictionary of xarray datasets. 
     cat.esmcat.aggregation_control
     dset_dict = cat_subset.to_dataset_dict(
