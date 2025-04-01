@@ -47,6 +47,9 @@ def area_weighted_mean(xrds, lat, lon):
     return weighted_mean
 
 def detrend_funct(xrds):
+    xrds = xrds.dropna(dim = 'plev', how = 'any')
+    print(xrds.variables['ta'].values)
+    
     detrended_temp = xr.apply_ufunc(
     detrend, xrds['ta'],
     kwargs={"axis": xrds['ta'].get_axis_num('time'), "type": "linear"},
