@@ -1,7 +1,8 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-from ncf_funct import cdf_merge, replace_coordinate
+from ncf_funct import detrend_fct, difference
+from datetime import datetime
 import colorcet as cc
 
 '''        Variable Names
@@ -156,12 +157,233 @@ def plot_annual(xrds, lon, lat, lev, time, variable, savename):
     print(f'saving to... {savename}')
     plt.savefig(savename, dpi = 300)
 
+# plot to compare MERRA2 and JRA55
+
+def load_reans(time_range:tuple):
+    # load jra55
+    time_slice = slice(f'{time_range[0]}-01-01', f'{time_range[1]}-12-01')
+
+    model_xrds = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc')
+    print(model_xrds)
+    model_xrds = model_xrds.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'initial_time0_hours': 'time', 'TMP_GDS4_HYBL_S123':'ta'})
+    model_xrds = model_xrds.sel(plev = slice(1000,1))
+    print(model_xrds)
+    model_xrds =model_xrds.sel(time = time_slice)
+    #model_xrds = detrend_fct(model_xrds) # detrend 
+
+    # load reanalysis
+    rean_xrds = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    rean_xrds = rean_xrds.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
+    rean_xrds = rean_xrds.sel(plev = slice(1000,1))
+    rean_xrds = rean_xrds.sortby('time')
+    
+    rean_xrds = rean_xrds.sel(time = time_slice)
+    #rean_xrds = detrend_fct(rean_xrds) #detrend 
+
+
+    annual_model = annual_zonal_mean(model_xrds, 'lon', 'time', 'ta')
+    seasonal_model = seasonal_zonal_mean(model_xrds, 'lon', 'time', 'ta')
+
+    annual_rean = annual_zonal_mean(rean_xrds, 'lon', 'time', 'ta')
+    seasonal_rean = seasonal_zonal_mean(rean_xrds, 'lon', 'time', 'ta')
+
+    xrds_li = [(annual_model, annual_rean), (seasonal_model, seasonal_rean)]
+    diff_li = []
+
+    for model, rean in xrds_li:
+        diff = difference(model, rean)
+        diff_li.append(diff)
+
+    annual_diff = diff_li[0] 
+    seasonal_diff = diff_li[1] 
+
+    maximum = max(float(diff_li[0]['ta'].max()), float(diff_li[1]['ta'].max()))
+    minimum = max(float(diff_li[0]['ta'].min()), float(diff_li[1]['ta'].min()))
+    print(f'maximum difference: {maximum} \n minimum difference: {minimum}')
+
+    data = (annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff)
+
+    return data, maximum, minimum
+    
+def compare_rean(data, savename, time_range):
+
+    annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff = data
+    fig, axes = plt.subplots(nrows = 5, ncols = 3, figsize = (25, 20), 
+                             sharex = True, sharey = False, layout = 'constrained')
+
+    fig.suptitle(f' {model} Zonal Mean Temperature \n in {time_range[0]}-{time_range[1]}', fontsize = 20)
+
+    k = 0
+    for name, annual, seasonal in [('JRA-55', annual_model, seasonal_model), ('MERRA2',annual_rean, seasonal_rean)]:
+        # plot model
+        boundaries = [180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
+        cf = xr.plot.contourf(annual['ta'],
+                x = 'lat',
+                y = 'plev', 
+                yincrease =  False,
+                add_colorbar=True,
+                cbar_kwargs= {'label':'Temperature, K', 'drawedges':True, 'ticks':boundaries},
+                levels = boundaries,
+                add_labels = False,
+                cmap= cc.cm.rainbow4,
+                extend="neither",
+                yscale = 'log',
+                ylim = (1000, 1),
+                ax = axes[0,k])
+        cs = xr.plot.contour(annual['ta'],
+                x = 'lat',
+                y = 'plev', 
+                yincrease =  False,
+                add_colorbar= False,
+                add_labels = False,
+                linewidths = 0.5,
+                colors ="k",
+                levels = boundaries,
+                yscale = 'log',
+                ylim = (1000, 1),
+                xlim = (-89, 89),
+                ax = axes[0,k])
+        plt.clabel(cs, cs.levels, fontsize=10)
+        annual.close()
+
+        axes[0,k].set_ylabel('Pressure, hPa', fontsize = 15)
+        axes[0,k].set_title(f'{name} \nAnnual', fontsize = 15)
+
+        cbar = cf.colorbar  # Get the colorbar object
+        cbar.ax.tick_params(length=0)
+        #cbar.ax.set_ylabel('Temperature, K', fontsize=15) 
+
+        for i, season in enumerate(("DJF", "MAM", "JJA", "SON")):
+            cf = xr.plot.contourf(seasonal['ta'].sel(season=season), 
+                x = 'lat',
+                y = 'plev', 
+                yincrease =  False,
+                add_colorbar=True,
+                cbar_kwargs= {'label':'Temperature, K', 'drawedges':True, 'ticks':boundaries},
+                levels = boundaries,
+                add_labels = False,
+                cmap= cc.cm.rainbow4,
+                extend="neither",
+                yscale = 'log',
+                ylim = (1000, 1),
+                xlim = (-89, 89),
+                ax = axes[i + 1,k])
+            cs = xr.plot.contour(seasonal['ta'].sel(season = season),
+                x = 'lat',
+                y = 'plev', 
+                yincrease =  False,
+                add_colorbar= False,
+                add_labels = False,
+                linewidths = 0.5,
+                colors ="k",
+                levels = boundaries,
+                yscale = 'log',
+                ylim = (1000, 1),
+                ax = axes[i + 1, k])
+            plt.clabel(cs, cs.levels, fontsize=10)
+            seasonal.close()
+
+            axes[i+1, k].set_ylabel('Pressure, hPa', fontsize = 15)
+            axes[i+1, k].set_title(season, fontsize = 15)
+
+            cbar = cf.colorbar  # Get the colorbar object
+            cbar.ax.tick_params(length=0)
+            #cbar.ax.set_ylabel('Temperature, K', fontsize=12) 
+
+        axes[4,k].set_xlabel('Latitude, °N', fontsize = 15)
+        k+=1
+
+    # plot difference
+    boundaries = [-50,-30, -20,-18, -16,-14, -12, -10, -8, -6, -4, -2, -1, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20,30, 50]
+    cf = xr.plot.contourf(annual_diff['ta'],
+            x = 'lat',
+            y = 'plev', 
+            yincrease =  False,
+            add_colorbar=True,
+            cbar_kwargs= {'label':'Temperature Difference, K', 'drawedges':True, 'ticks':boundaries},
+            levels = boundaries,
+            add_labels = False,
+            cmap= cc.cm.CET_D9,
+            extend="neither",
+            yscale = 'log',
+            ylim = (1000, 1),
+            xlim = (-89, 89),
+            ax = axes[0,k])
+    cs = xr.plot.contour(annual_diff['ta'],
+            x = 'lat',
+            y = 'plev', 
+            yincrease =  False,
+            add_colorbar= False,
+            add_labels = False,
+            linewidths = 0.5,
+            colors ="k",
+            levels = boundaries,
+            yscale = 'log',
+            ylim = (1000, 1),
+            xlim = (-89, 89),
+            ax = axes[0,k])
+    plt.clabel(cs, cs.levels, fontsize=10)
+    annual_diff.close()
+    axes[0,1].set_title('Difference \nAnnual', fontsize = 15)
+    axes[0,1].set_ylabel('Pressure, hPa', fontsize = 15)
+
+
+    cbar = cf.colorbar  # Get the colorbar object
+    cbar.ax.tick_params(length=0)
+    #cbar.ax.set_ylabel('Temperature Difference, K', fontsize=12) 
+
+    for i, season in enumerate(("DJF", "MAM", "JJA", "SON")):
+        cf = xr.plot.contourf(seasonal_diff['ta'].sel(season=season), 
+            x = 'lat',
+            y = 'plev', 
+            yincrease =  False,
+            add_colorbar=True,
+            cbar_kwargs= {'label':'Temperature Difference, K', 'drawedges':True, 'ticks':boundaries},
+            levels = boundaries,
+            add_labels = False,
+            cmap= cc.cm.CET_D9,
+            extend="neither",
+            yscale = 'log',
+            ylim = (1000, 1),
+            xlim = (-89, 89),
+            ax = axes[i + 1,k])
+        cs = xr.plot.contour(seasonal_diff['ta'].sel(season = season),
+            x = 'lat',
+            y = 'plev', 
+            yincrease =  False,
+            add_colorbar= False,
+            add_labels = False,
+            linewidths = 0.5,
+            colors ="k",
+            levels = boundaries,
+            yscale = 'log',
+            ylim = (1000, 1),
+            xlim = (-89, 89),
+            ax = axes[i + 1, k])
+        plt.clabel(cs, cs.levels, fontsize=10)
+        seasonal_diff.close()
+
+        axes[i+1,1].set_title(season, fontsize = 15)
+        axes[i+1,1].set_ylabel('Pressure, hPa', fontsize = 15)
+
+
+        cbar = cf.colorbar  # Get the colorbar object
+        cbar.ax.tick_params(length=0)
+    axes[4,1].set_xlabel(f'Latitude, °N', fontsize = 15)
+
+    print(f'saving to... {savename}')
+    plt.savefig(savename, dpi = 400)
+    plt.close()
+    return
+
 if __name__ == '__main__':
-    xrds = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
-    xrds = xrds.sortby('time')
-    print(xrds)
-    xrds = xrds.sel(time = slice('1980-01-01', '2014-01-01'))
-    xrds = xrds.sel(lev = slice(1000,1))
-    print(xrds)
-    savename = '/home/siw2111/cmip6_reanalyses_comp/reanalyses_plots/03-20-2025/MERRA2_zonal-mean_1980-2014.png'
-    plot_annual(xrds, lon = 'lon', lat = 'lat', lev = 'lev', time = 'time', variable = 'T', savename = savename )
+    start = datetime.now()
+    model = 'JRA-55'
+    time_range = ('1980','2000')
+    data, maximum, minimum = load_reans(time_range)
+    savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-03-2025/{model}_plots_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
+    compare_rean(data, savename, time_range)
+        
+    end = datetime.now()
+        
+    print(f'finished at {end}, runtime: {end - start}')
