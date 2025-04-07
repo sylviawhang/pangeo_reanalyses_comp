@@ -63,18 +63,27 @@ def detrend_fct(xrds):
     xrds['ta'] = detrended_temp + const
     return xrds
 
-def linear_fit(temp):
-    fit = linregress(temp)
+def linear_fit(x):
+    fit = linregress(np.arange(len(x)), x)
     return fit.slope
 
 def find_trend(xrds):
-
-    trend = xr.apply_ufunc(linear_fit, xrds['ta'], 
-    kwargs={"axis": xrds['ta'].get_axis_num('time'), "type": "linear"},
+    xrds = xrds.dropna(dim = 'plev', how = 'any') # find a better way to do this.
+    print(xrds)
+    
+    trend = xr.apply_ufunc(linear_fit, 
+    xrds['ta'].chunk(dict(year  = -1)),
+    input_core_dims=[['year']],
+    vectorize = True,
     dask="parallelized")
+    
     xrds['ta'] = trend
+    xrds = xrds.mean(dim = 'year')
+    
+    print(xrds) 
+    print(xrds.variables['ta'].values)
 
-    return xrds
+    return xrds # trend K/year
 
 def difference(model, rean):
     # select common pressure levels
@@ -147,22 +156,10 @@ def interpolate(xrds1, xrds2):
     return xrds1_interp
 
 if __name__ == '__main__':
-    '''merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
-    era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
-    
-    era5 = era5.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})
-    merra2 = merra2.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
-    
-    lon = merra2.coords['lon'].values
-    merra2 = merra2.assign_coords(lon = np.add(lon,180)) 
-    print(merra2)
+    xrds = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    xrds = xrds.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
+    xrds = find_trend(xrds.groupby('time.year').mean())
 
-    merra2 = interpolate_grid(merra2, era5)'''
-
-    era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto')
-    era51 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5.1/ERA5-1-gridded.nc', chunks = 'auto')
-
-    concat_era(era5, era51)
 
 
     

@@ -131,7 +131,7 @@ def plot_zonal_means(xrds, savename, lat, lon, lev, time, variable, title):
 
 def plot_annual(xrds, lon, lat, lev, time, variable, savename):
     annual_xrds = annual_zonal_mean(xrds, lon, time, variable)
-    
+
     boundaries = [180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
     plt.figure(figsize = (12,6), layout = 'constrained')
     xr.plot.contourf(annual_xrds[variable],
