@@ -2,6 +2,7 @@ import xarray as xr
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import detrend
+from scipy.stats import linregress
 
 # net cdf functions 
 
@@ -46,11 +47,14 @@ def area_weighted_mean(xrds, lat, lon):
     weighted_mean = xrds_weighted.mean(dim = [lat, lon])
     return weighted_mean
 
-def detrend_funct(xrds):
-    xrds = xrds.dropna(dim = 'plev', how = 'any')
+def detrend_fct(xrds):
+    #print(xrds.variables['ta'].values)
+
+    xrds = xrds.dropna(dim = 'plev', how = 'any') # find a better way to do this.
+    
     const = xrds['ta'].mean(dim = 'time')
 
-    print(xrds.variables['ta'].values)
+    #print(xrds.variables['ta'].values)
     
     detrended_temp = xr.apply_ufunc(
     detrend, xrds['ta'],
@@ -59,14 +63,31 @@ def detrend_funct(xrds):
     xrds['ta'] = detrended_temp + const
     return xrds
 
-def detrend_model(xrds):
-    # split into 1980-1999, 2000-2014 to reduce ozone hole signal
-    xrds1 = detrend_funct(xrds.sel(time = slice('1980-01-01', '1999-12-01')))
-    xrds2 = detrend_funct(xrds.sel(time = slice('2000-01-01', '2014-12-01')))
-    # concatenate
-    detrended_xrds = xr.concat([xrds1, xrds2], dim = 'time')
-    
-    return detrended_xrds
+def linear_fit(temp):
+    fit = linregress(temp)
+    return fit.slope
+
+def find_trend(xrds):
+
+    trend = xr.apply_ufunc(linear_fit, xrds['ta'], 
+    kwargs={"axis": xrds['ta'].get_axis_num('time'), "type": "linear"},
+    dask="parallelized")
+    xrds['ta'] = trend
+
+    return xrds
+
+def difference(model, rean):
+    # select common pressure levels
+    common_plev = np.intersect1d(rean['plev'], model['plev'])
+    rean = rean.sel(plev = common_plev)
+    model = model.sel(plev = common_plev)
+    # interpolate to commmon grid
+    model_lat = model['lat']
+    rean = rean.interp(lat = model_lat)
+
+    diff = model - rean
+
+    return diff
 
 def interpolate_grid(xrds1, xrds2):
     # assume all datasets have the same coordinate names

@@ -1,12 +1,10 @@
 import intake
-import intake_esm
 from intake import open_catalog
 import xarray as xr
 from matplotlib import pyplot as plt
 import numpy as np
 from reanalyses_plots import plot_annual
-from ncf_funct import sort_coordinate, interpolate, cdf_merge, area_weighted_mean, concat_era
-import statistics
+from ncf_funct import sort_coordinate, area_weighted_mean, concat_era
 
 '''cat = open_catalog("https://raw.githubusercontent.com/pangeo-data/pangeo-datastore/master/intake-catalogs/climate.yaml")
 print(cat.walk(depth = 4))'''
@@ -63,42 +61,46 @@ def group_year(xrds, time, lat, lon, model = True): # pre-process data for each 
     print(xrds)
     return xrds
 
-def trend_plot_2():
-    # get models (start with 10)
-    model_dict = pangeo_pull( variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon', dict = True)
-    i = 0
-    for key, xrds in model_dict.items():
-        if i >10:
-            break
-        print('----------------------')
-        print(key)
-        name = key.split('.')[2]
-        print(f'label: {name}')
-        plev = xrds.coords['plev'].values
-        xrds = xrds.assign_coords(plev = np.divide(plev,100)) # convert from pa to hpa
-        print(f'pressure levels: {len(plev)}')
-        
-        top = xrds.coords['plev'].values[-1]
-        print(f'model top: {top}')
-        
-        xrds_10 = group_year(xrds.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = True)
-        xr.plot.line(xrds_10['ta'], x = 'year', label = name)
-        i +=1
+def line_plot():
+    model = pangeo_pull('GISS-E2-1-G')
+    plev = model.coords['plev'].values
+    model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
+    
+    model = model.sel(time = slice('1980-01-01', '2014-01-12'))
+    model.coords['time'] = model.coords['time'].to_index()
+
+    #model = detrend_model(model)
+
+    '''model_10 = group_year(model.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat')
+    
+    xr.plot.line(model_10['ta'], x = 'year', color = 'r', label = 'GISS-E2-1-G annual mean', zorder = 20)'''
+    
+    model = area_weighted_mean(model, 'lat', 'lon')
+    model = model.sel(plev = 1e+01)
+    model = model.sel(member_id  = 'r1i1p1f1')
+
+    print(model)
+    xr.plot.line(model['ta'], x = 'time', color = 'b', label = 'GISS-E2-1-G monthly mean' , zorder = 5)
 
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     merra2 = sort_coordinate(merra2) # sort time
-    merra2_10 = group_year(merra2.sel(lev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = False)
-    xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2', color = 'darkblue')
-    merra2.close()
+    '''merra2_10 = group_year(merra2.sel(lev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = False)
+    xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2 annual mean', color = 'b', zorder = 10)'''
+    
+    merra2 = area_weighted_mean(merra2, 'lat', 'lon')
+    merra2 = merra2.sel(lev =1e+01)
+    merra2 - merra2.sel(time = slice('1980-01-01', '2014-01-12'))
+    merra2.coords['time'] = merra2.coords['time'].to_index()
 
-    plt.title('Temperature as a Function of Time at 10hpa')
+    print(merra2)
+    xr.plot.line(merra2['T'], x = 'time', label = 'MERRA2 monthly mean', color = 'lightsteelblue', zorder = 0)
+
+    merra2.close()
+    plt.yticks(np.arange(228, 231, 0.5))
+    plt.title('Temperature as a Function of Time')
     plt.legend()
-    plt.xlabel('time YYYY')
-    plt.ylabel('temperature K')
-    plt.xlim(1850,2014)
-    savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-03-2025/40model_3obs_1850-2014_.png'
-    print(f'saving to...{savename}')
-    plt.savefig(savename, dpi = 300)
+    plt.savefig('/home/siw2111/cmip6_reanalyses_comp/model_plots/04-03-2025/GISS_MERRA_line.png')
+
 
 def trend_plot():
     # set color map
@@ -163,7 +165,8 @@ def plot_climatology(xrds, savename):
                 variable = 'ta')
 
 if __name__ == '__main__':
-    trend_plot()
+    line_plot()
+    #trend_plot()
     #savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/GISS-E2-1-G_climatology_1980-2014_1.png'
     #plot_climatology(xrds, savename)
 
