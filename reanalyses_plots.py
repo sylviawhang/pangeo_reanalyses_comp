@@ -340,7 +340,7 @@ def compare_rean(data, savename, time_range):
             ax = axes[0,k])
     plt.clabel(cs, cs.levels, fontsize=10)
     annual_diff.close()
-    axes[0,k].set_title('Difference \nAnnual', fontsize = 15)
+    axes[0,k].set_title('Mean Difference \nAnnual', fontsize = 15)
     axes[0,k].set_ylabel('Pressure, hPa', fontsize = 15)
 
 

@@ -3,6 +3,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import detrend
 from scipy.stats import linregress
+from dask.diagnostics import ProgressBar
+
 
 # net cdf functions 
 
@@ -69,8 +71,9 @@ def linear_fit(x):
 
 def find_trend(xrds):
     xrds = xrds.dropna(dim = 'plev', how = 'any') # find a better way to do this.
-    print(xrds)
+    #print(xrds)
     
+    xrds = xrds.groupby('time.year').mean(dim = 'time')
     trend = xr.apply_ufunc(linear_fit, 
     xrds['ta'].chunk(dict(year  = -1)),
     input_core_dims=[['year']],
@@ -78,12 +81,14 @@ def find_trend(xrds):
     dask="parallelized")
     
     xrds['ta'] = trend
-    xrds = xrds.mean(dim = 'year')
-    
-    print(xrds) 
-    print(xrds.variables['ta'].values)
+    xrds = xrds.chunk('auto')
 
-    return xrds # trend K/year
+    xrds = xrds.mean(dim = 'year')
+    xrds = xrds * 10 # convert /year to /decade
+    #with ProgressBar():
+       #print(xrds.variables['ta'].values) 
+
+    return xrds # trend K/decade
 
 def difference(model, rean):
     # select common pressure levels
@@ -157,8 +162,10 @@ def interpolate(xrds1, xrds2):
 
 if __name__ == '__main__':
     xrds = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    xrds = xrds.sortby('time')
+    xrds = xrds.sel(time = slice('1980-01-01', '2014-01-12'))
     xrds = xrds.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
-    xrds = find_trend(xrds.groupby('time.year').mean())
+    xrds = find_trend(xrds)
 
 
 

@@ -31,7 +31,6 @@ def load_models(source_id, institution_id, time_range:tuple):
     rean_xrds = rean_xrds.sortby('time')
     
     rean_xrds = rean_xrds.sel(time = time_slice)
-    print(rean_xrds.variables['ta'].values)
 
     annual_model = annual_zonal_mean_detrended(model_xrds, 'lon', 'time', 'ta')
     seasonal_model = seasonal_zonal_mean_detrended(model_xrds, 'lon', 'time', 'ta')
@@ -62,10 +61,10 @@ def plot_clim(data, savename, time_range):
     fig, axes = plt.subplots(nrows = 5, ncols = 2, figsize = (18, 20), 
                              sharex = True, sharey = False, layout = 'constrained')
 
-    fig.suptitle(f' {model} Zonal Mean Temperature \n in {time_range[0]}-{time_range[1]}', fontsize = 20)
+    fig.suptitle(f' {model} Temperature \n in {time_range[0]}-{time_range[1]}', fontsize = 20)
     
     # plot model
-    boundaries = [180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
+    boundaries = [175, 180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
     cf = xr.plot.contourf(annual_model['ta'],
             x = 'lat',
             y = 'plev', 
@@ -96,7 +95,7 @@ def plot_clim(data, savename, time_range):
     annual_model.close()
 
     axes[0,0].set_ylabel('Pressure, hPa', fontsize = 15)
-    axes[0,0].set_title(f'{model} \nAnnual', fontsize = 15)
+    axes[0,0].set_title('Zonal Mean Temperature \nAnnual', fontsize = 15)
 
     cbar = cf.colorbar  # Get the colorbar object
     cbar.ax.tick_params(length=0)
@@ -173,13 +172,13 @@ def plot_clim(data, savename, time_range):
             ax = axes[0,1])
     plt.clabel(cs, cs.levels, fontsize=10)
     annual_diff.close()
-    axes[0,1].set_title('Difference \nAnnual', fontsize = 15)
+    axes[0,1].set_title('Difference in Mean \nAnnual', fontsize = 15)
     axes[0,1].set_ylabel('Pressure, hPa', fontsize = 15)
 
 
     cbar = cf.colorbar  # Get the colorbar object
     cbar.ax.tick_params(length=0)
-    cbar.ax.set_ylabel('Temperature Difference, K', fontsize=12) 
+    cbar.ax.set_ylabel('Temperature Difference, K', fontsize=15) 
 
     for i, season in enumerate(("DJF", "MAM", "JJA", "SON")):
         cf = xr.plot.contourf(seasonal_diff['ta'].sel(season=season), 
@@ -218,7 +217,7 @@ def plot_clim(data, savename, time_range):
 
         cbar = cf.colorbar  # Get the colorbar object
         cbar.ax.tick_params(length=0)
-        cbar.ax.set_ylabel('Temperature Difference, K', fontsize=12) 
+        cbar.ax.set_ylabel('Temperature Difference, K', fontsize=15) 
     axes[4,1].set_xlabel(f'Latitude, °N', fontsize = 15)
 
     print(f'saving to... {savename}')
@@ -226,25 +225,25 @@ def plot_clim(data, savename, time_range):
     plt.close()
 
 if __name__ == '__main__':
-    '''model_li = ['ACCESS-CM2', 'AWI-CM-1-1-MR' , 'CESM2-WACCM', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0']
+    model_li = ['CESM2-WACCM', 'ACCESS-CM2', 'AWI-CM-1-1-MR' , 'GISS-E2-1-G', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0', 'E3SM-1-1', 'EC-Earth3','EC-Earth3-CC', 'EC-Earth3-Veg', 'INM-CM5-0', 'IPSL-CM6A-LR' , 'KACE-1-0-G']
     for model in model_li:
-        for time_range in [('1980','1999'), ('2000', '2014')]:
+        for time_range in [('1980','2014')]:
             print(f'plotting... {model} -----------------------------------------------')
             try:
                 start = datetime.now()
 
                 data, maximum, minimum = load_models(model, '', time_range)
-                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-03-2025/{model}_plots_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
+                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-10-2025/{model}_zonal-mean_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
                 plot_clim(data, savename, time_range)
-                
+                model.close()
                 end = datetime.now()
                 print(f'{model} finished at {end}, runtime: {end - start}')
             except:
                 print(f'error: unable to plot {model}')
-                continue'''
+                continue
     
     
-    start = datetime.now()
+    '''start = datetime.now()
     
     model = 'CESM2-WACCM'
     institution = ''
@@ -254,5 +253,5 @@ if __name__ == '__main__':
     plot_clim(data, savename, time_range)
     
     end = datetime.now()
-    print(f'finished at {end}, runtime: {end - start}')
+    print(f'finished at {end}, runtime: {end - start}')'''
 
