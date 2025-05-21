@@ -173,7 +173,7 @@ def plot_clim(data, savename, time_range):
     plt.clabel(cs, cs.levels, fontsize=10)
     annual_diff.close()
     axes[0,1].set_title('Difference in Mean \nAnnual', fontsize = 15)
-    axes[0,1].set_ylabel('Pressure, hPa', fontsize = 15)
+    #axes[0,1].set_ylabel('Pressure, hPa', fontsize = 15)
 
 
     cbar = cf.colorbar  # Get the colorbar object
@@ -186,7 +186,7 @@ def plot_clim(data, savename, time_range):
             y = 'plev', 
             yincrease =  False,
             add_colorbar=True,
-            cbar_kwargs= {'label':'Temperature Difference, K', 'drawedges':True, 'ticks':boundaries},
+            cbar_kwargs= {'label':'K', 'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
             cmap= cc.cm.CET_D9,
@@ -212,12 +212,12 @@ def plot_clim(data, savename, time_range):
         seasonal_diff.close()
 
         axes[i+1,1].set_title(season, fontsize = 15)
-        axes[i+1,1].set_ylabel('Pressure, hPa', fontsize = 15)
+        #axes[i+1,1].set_ylabel('Pressure, hPa', fontsize = 15)
 
 
         cbar = cf.colorbar  # Get the colorbar object
         cbar.ax.tick_params(length=0)
-        cbar.ax.set_ylabel('Temperature Difference, K', fontsize=15) 
+        cbar.ax.set_ylabel('K', fontsize=15) 
     axes[4,1].set_xlabel(f'Latitude, °N', fontsize = 15)
 
     print(f'saving to... {savename}')
@@ -225,7 +225,12 @@ def plot_clim(data, savename, time_range):
     plt.close()
 
 if __name__ == '__main__':
-    model_li = ['CESM2-WACCM', 'ACCESS-CM2', 'AWI-CM-1-1-MR' , 'GISS-E2-1-G', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0', 'E3SM-1-1', 'EC-Earth3','EC-Earth3-CC', 'EC-Earth3-Veg', 'INM-CM5-0', 'IPSL-CM6A-LR' , 'KACE-1-0-G']
+    #model_li = ['CESM2-WACCM', 'ACCESS-CM2', 'AWI-CM-1-1-MR' , 'GISS-E2-1-G', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0', 'E3SM-1-1', 'EC-Earth3','EC-Earth3-CC', 'EC-Earth3-Veg', 'INM-CM5-0', 'IPSL-CM6A-LR' , 'KACE-1-0-G']
+    
+         
+    model_li = ['ACCESS-ESM1-5','BCC-CSM2-MR', 'CAMS-CSM1-0','CanESM5','CAS-ESM2-0','CESM2', 'CIESM','CMCC-CM2-SR5', 'CMCC-ESM2', 'EC-Earth3-Veg-LR','FGOALS-f3-L', 'FGOALS-g3',
+                'FIO-ESM-2-0', 'GFDL-CM4', 'GFDL-ESM4', 'INM-CM4-8', 'KIOST-ESM', 'MIROC-ES2L','NESM3', 'NorESM2-LM','NorESM2-MM ','TaiESM1' ]
+    
     for model in model_li:
         for time_range in [('1980','2014')]:
             print(f'plotting... {model} -----------------------------------------------')
@@ -233,7 +238,7 @@ if __name__ == '__main__':
                 start = datetime.now()
 
                 data, maximum, minimum = load_models(model, '', time_range)
-                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-10-2025/{model}_zonal-mean_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
+                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/{model}_zonal-mean_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
                 plot_clim(data, savename, time_range)
                 model.close()
                 end = datetime.now()

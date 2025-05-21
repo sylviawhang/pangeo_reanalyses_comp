@@ -78,7 +78,7 @@ def plot_trend(data, savename, time_range):
     fig, axes = plt.subplots(nrows = 5, ncols = 2, figsize = (18, 20), 
                              sharex = False, sharey = False, layout = 'constrained')
 
-    fig.suptitle(f' {model} Temperature in {time_range[0]}-{time_range[1]}', fontsize = 20, fontweight = "bold")
+    fig.suptitle(f' {model} Temperature in {time_range[0]}-{time_range[1]}', fontsize = 20, fontweight = "medium")
     
     # plot model
     print('plotting trends...')
@@ -250,7 +250,10 @@ def plot_trend(data, savename, time_range):
     plt.close()
 
 if __name__ == '__main__':
-    '''model_li = ['CESM2-WACCM', 'ACCESS-CM2', 'AWI-CM-1-1-MR' , 'GISS-E2-1-G', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0', 'E3SM-1-1', 'EC-Earth3','EC-Earth3-CC', 'EC-Earth3-Veg', 'INM-CM5-0', 'IPSL-CM6A-LR' , 'KACE-1-0-G']
+    lo_model_li = ['ACCESS-ESM1-5','BCC-CSM2-MR', 'CAMS-CSM1-0','CanESM5','CAS-ESM2-0','CESM2', 'CIESM','CMCC-CM2-SR5', 'CMCC-ESM2', 'EC-Earth3-Veg-LR','FGOALS-f3-L', 'FGOALS-g3',
+'FIO-ESM-2-0', 'GFDL-CM4', 'GFDL-ESM4', 'INM-CM4-8', 'KIOST-ESM', 'MIROC-ES2L','NESM3', 'NorESM2-LM','NorESM2-MM ','TaiESM1' ]
+    model_li = ['CESM2-WACCM', 'ACCESS-CM2', 'AWI-CM-1-1-MR' , 'GISS-E2-1-G', 'GISS-E2-1-H','IITM-ESM','MIROC6', 'MPI-ESM1-2-HR', 'MPI-ESM1-2-LR', 'MRI-ESM2-0', 'E3SM-1-1', 'EC-Earth3','EC-Earth3-CC', 'EC-Earth3-Veg', 'INM-CM5-0', 'IPSL-CM6A-LR' , 'KACE-1-0-G']
+    model_li = model_li + lo_model_li
     for model in model_li:
         for time_range in [('1980','2014')]:
             print(f'plotting... {model} -----------------------------------------------')
@@ -258,16 +261,17 @@ if __name__ == '__main__':
                 start = datetime.now()
 
                 data, maximum, minimum = load_models(model, '', time_range)
-                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-10-2025/{model}_zonal-mean_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
-                plot_clim(data, savename, time_range)
+                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/{model}_trend_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
+                plot_trend(data, savename, time_range)
                 model.close()
+                
                 end = datetime.now()
                 print(f'{model} finished at {end}, runtime: {end - start}')
             except:
                 print(f'error: unable to plot {model}')
-                continue'''
-    
-    
+                continue
+
+    '''
     start = datetime.now()
     
     model = 'CESM2-WACCM'
@@ -278,5 +282,4 @@ if __name__ == '__main__':
     plot_trend(data, savename, time_range)
     
     end = datetime.now()
-    print(f'finished at {end}, runtime: {end - start}')
-
+    print(f'finished at {end}, runtime: {end - start}')'''
