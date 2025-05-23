@@ -160,7 +160,7 @@ def trend_plot(level, savename):
             plev = model.coords['plev'].values
             model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
             
-            model = model.sel(lat = slice(60, 90))
+            #model = model.sel(lat = slice(60, 90))
             
             model_10 = group_year(model.sel(plev = level), time = 'time', lon = 'lon', lat = 'lat') # annual mean, mean over latitude, longitude
             ax.plot(model_10['year'], model_10['ta'], label = id, linewidth = 0.75, linestyle = 'dotted')
@@ -176,7 +176,7 @@ def trend_plot(level, savename):
             plev = model.coords['plev'].values
             model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
             
-            model = model.sel(lat = slice(60, 90))
+            #model = model.sel(lat = slice(60, 90))
 
             model_10 = group_year(model.sel(plev = level), time = 'time', lon = 'lon', lat = 'lat') # annual mean, mean over latitude, longitude
             ax.plot(model_10['year'], model_10['ta'], label = id, linewidth = 0.75)
@@ -186,25 +186,25 @@ def trend_plot(level, savename):
             continue
 
     era5 = concat_era()
-    era5 = era5.sel(latitude = slice(60, 90))
+    #era5 = era5.sel(latitude = slice(60, 90))
     era5_10 = group_year(era5.sel(pressure_level = level), time = 'valid_time', lon = 'longitude', lat = 'latitude', model = False)
     xr.plot.line(era5_10['t'], x = 'year', label = 'ERA5.1', color = 'lightgrey', linewidth = 1)
     era5.close()
 
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     merra2 = sort_coordinate(merra2) # sort time
-    merra2 = merra2.sel(lat = slice(60, 90))
+    #merra2 = merra2.sel(lat = slice(60, 90))
     merra2_10 = group_year(merra2.sel(lev = level), time = 'time', lon = 'lon', lat = 'lat', model = False)
     xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2', color = 'tab:grey', linewidth = 1)
     merra2.close()
 
     jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc', chunks = 'auto')
-    jra55 = jra55.sel(latitude = slice(60, 90))
+    #jra55 = jra55.sel(latitude = slice(60, 90))
     jra55_10 = group_year(jra55.sel(pressure_level = level), time = 'initial_time0_hours', lon = 'longitude', lat = 'latitude', model = False)
     xr.plot.line(jra55_10['TMP_GDS4_HYBL_S123'], x = 'year', label = 'JRA55', color = 'k', linewidth = 1)
     jra55.close()
 
-    plt.title(f'(60-90N) Temperature as a Function of Time at {level} hpa ')
+    plt.title(f'Temperature as a Function of Time at {level} hpa ')
    
     plt.xlabel('time YYYY')
     plt.xlim(1850,2014)
@@ -240,8 +240,8 @@ def plot_climatology(xrds, savename):
                 variable = 'ta')
 
 if __name__ == '__main__':
-    #trend_plot(1,  '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/1_line_1850-2014_1.png')
-    trend_plot(10, '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/10hPa_60-90N_1850-2014.png')
+    trend_plot(100,  '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-21-2025/100_line_1850-2014_1.png')
+    trend_plot(70, '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-21-2025/70_line_1850-2014.png')
     '''trend_plot(5, '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/5_line_1850-2014_1.png')
     trend_plot(50, '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/50_line_1850-2014_1.png')
     trend_plot(100, '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/100_line_1850-2014_1.png')'''

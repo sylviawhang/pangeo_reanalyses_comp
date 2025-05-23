@@ -39,7 +39,18 @@ def load_models(source_id, institution_id, time_range:tuple):
     model_xrds = model_xrds.sel(plev = slice(1000,1))
     model_xrds = model_xrds.mean(dim = ['dcpp_init_year'])
 
-    # load reanalysis
+    '''# load JRA-55 reanalysis
+    rean_xrds = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
+    rean_xrds = rean_xrds.rename({'g4_lat_2':'lat', 'g4_lon_3':'lon', 'lv_HYBL1':'plev', 'initial_time0_hours': 'time', 'TMP_GDS4_HYBL_S123':'ta'})
+    model_lev = model_xrds['plev']
+    rean_xrds = rean_xrds.interp(plev = model_lev)
+
+    rean_xrds = rean_xrds.sel(plev = slice(1000,1))
+    rean_xrds = rean_xrds.sortby('time')
+    
+    rean_xrds = rean_xrds.sel(time = time_slice)'''
+
+    # load MERRA-2 reanalysis
     rean_xrds = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     rean_xrds = rean_xrds.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
     rean_xrds = rean_xrds.sel(plev = slice(1000,1))
@@ -47,6 +58,7 @@ def load_models(source_id, institution_id, time_range:tuple):
     
     rean_xrds = rean_xrds.sel(time = time_slice)
 
+    # group annually and seasonally
     annual_model = annual_zonal_trend(model_xrds, 'lon', 'time', 'ta')
     seasonal_model = seasonal_zonal_trend(model_xrds, 'lon', 'time', 'ta')
 
@@ -83,8 +95,7 @@ def plot_trend(data, savename, time_range):
     # plot model
     print('plotting trends...')
     print('annual model...')
-    #boundaries = [-1, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-    boundaries = [-2.0, -1.8, -1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0]
+    boundaries = [-5,-3.0, -2, -1.8,-1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 5]
     with ProgressBar():
         cf = xr.plot.contourf(annual_model['ta'],
                 x = 'lat',
@@ -120,7 +131,6 @@ def plot_trend(data, savename, time_range):
 
     cbar = cf.colorbar  # Get the colorbar object
     cbar.ax.tick_params(length=0)
-    #cbar.ax.set_ylabel('Temperature, K', fontsize=15) 
 
     for i, season in enumerate(("DJF", "MAM", "JJA", "SON")):
         print(f'{i}..............')
@@ -160,13 +170,12 @@ def plot_trend(data, savename, time_range):
 
         cbar = cf.colorbar  # Get the colorbar object
         cbar.ax.tick_params(length=0)
-        #cbar.ax.set_ylabel('Temperature, K', fontsize=12) 
 
     axes[4,0].set_xlabel('Latitude, °N', fontsize = 15, fontweight = "medium")
     
     # plot difference
     print('plotting difference...')
-    boundaries = [-5,-3.0,-2.5, -2, -1.8,-1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 5]
+    boundaries = [-5,-3.0, -2, -1.8,-1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 5]
     cf = xr.plot.contourf(annual_diff['ta'],
             x = 'lat',
             y = 'plev', 
@@ -175,7 +184,7 @@ def plot_trend(data, savename, time_range):
             cbar_kwargs= {'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
-            cmap= cc.cm.CET_D9,
+            cmap= cmr.prinsenvlag_r,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -196,14 +205,10 @@ def plot_trend(data, savename, time_range):
             ax = axes[0,1])
     plt.clabel(cs, cs.levels, fontsize=10)
     annual_diff.close()
-    axes[0,1].set_title('Difference in Trend \nAnnual', fontsize = 15, fontweight = "medium")
-    #axes[0,1].set_ylabel('Pressure, hPa', fontsize = 15)
-
+    axes[0,1].set_title('Difference from MERRA-2 \nAnnual', fontsize = 15, fontweight = "medium")
 
     cbar = cf.colorbar  # Get the colorbar object
     cbar.ax.tick_params(length=0)
-    #cbar.ax.set_ylabel('Temperature Difference, K', fontsize=15) 
-
     for i, season in enumerate(("DJF", "MAM", "JJA", "SON")):
         print(f'{i}.................')
         cf = xr.plot.contourf(seasonal_diff['ta'].sel(season=season), 
@@ -214,7 +219,7 @@ def plot_trend(data, savename, time_range):
             cbar_kwargs= { 'drawedges':True, 'ticks':boundaries},
             levels = boundaries,
             add_labels = False,
-            cmap= cc.cm.CET_D9,
+            cmap= cmr.prinsenvlag_r,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -237,12 +242,9 @@ def plot_trend(data, savename, time_range):
         seasonal_diff.close()
 
         axes[i+1,1].set_title(season, fontsize = 15, fontweight = "medium")
-        #axes[i+1,1].set_ylabel('Pressure, hPa', fontsize = 15)
-
 
         cbar = cf.colorbar  # Get the colorbar object
         cbar.ax.tick_params(length=0)
-        #cbar.ax.set_ylabel('Temperature Difference, K', fontsize=15) 
     axes[4,1].set_xlabel(f'Latitude, °N', fontsize = 15, fontweight = "medium")
 
     print(f'saving to... {savename}')
@@ -261,7 +263,7 @@ if __name__ == '__main__':
                 start = datetime.now()
 
                 data, maximum, minimum = load_models(model, '', time_range)
-                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/{model}_trend_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
+                savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/05-21-2025/{model}_trend_{time_range[0]}-{time_range[1]}_MERRA2.png'
                 plot_trend(data, savename, time_range)
                 model.close()
                 
