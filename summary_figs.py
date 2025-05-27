@@ -203,6 +203,127 @@ def tropics(model):
 
     return cold_point, upper_strat
 
+def tropics_rean(model, detrend = True):
+    model = model.sel(plev = slice(200,1))
+    if model.lat[0] < model.lat[1]:
+        model = model.sel(lat = slice(-30,30))
+    else: 
+        model = model.sel(lat = slice(30, -30))
+    
+    if detrend:
+        model = annual_zonal_mean_detrended(model, 'lon', 'time', 'ta')
+    else: 
+        model = annual_zonal_mean(model, 'lon', 'time', 'ta')
+    
+    cold_point = model.sel(plev = slice(200,10))
+    cold_point = area_weighted_mean_2(cold_point, 'lat')
+    cold_point = cold_point.mean(dim = 'plev').variables['ta'].values
+    print(f'cold point: {cold_point}')
+            
+    upper_strat = model.sel(plev = slice(10,1))
+    upper_strat = area_weighted_mean_2(upper_strat, 'lat')
+    upper_strat = upper_strat.mean(dim = 'plev').variables['ta'].values
+    print(f'upper stratosphere: {upper_strat}')
+
+    return cold_point, upper_strat
+
+def summary_2(hi_model_li, lo_model_li, savename):
+    fig = plt.figure(figsize = (7,5))
+    ax = fig.add_subplot()
+
+    # plot reanalyses
+    era5 = concat_era()
+    era5 = era5.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})
+
+    merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
+    merra2 = merra2.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
+    merra2 = merra2.sel(plev = slice(1000,1))
+    merra2 = merra2.sortby('time')
+
+    jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
+    jra55 = jra55.rename({'g4_lat_2':'lat', 'g4_lon_3':'lon', 'lv_HYBL1':'plev', 'initial_time0_hours': 'time', 'TMP_GDS4_HYBL_S123':'ta'})
+    standard_lev = merra2['plev']
+    jra55 = jra55.interp(plev = standard_lev)
+    lat = jra55.coords['lat']
+    jra55 = jra55.assign_coords(lat = lat.round(1)) # convert from pa to hpa
+    
+    rean_li = [era5, jra55, merra2]
+
+    i = 0
+    for rean in rean_li:
+        print(rean)
+        rean = rean.sel(time = slice('1980-01-01', '2014-01-12'))
+
+        if i == 0:
+            cold_point, upper_strat = tropics_rean(rean, detrend = False)
+            ax.scatter(cold_point, upper_strat, s = 35, c = 'k', marker = 'o', alpha = 0.5, label = 'reanalysis')
+            print(f'plotted!')
+        else: 
+            cold_point, upper_strat = tropics_rean(rean, detrend = True)
+            ax.scatter(cold_point, upper_strat, s = 35, c = 'k', marker = 'o', alpha = 0.5)
+            print('plotted!')
+        i +=1
+        rean.close()
+
+    # plot high-top models
+    i = 0
+    for id in hi_model_li:
+        print(f'{id}')
+        try: 
+            model = pangeo_pull(id, '')
+            model = model.sel(time = slice('1980-01-01', '2014-01-12'))
+            plev = model.coords['plev'].values
+            model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
+            
+            # extract means
+            cold_point, upper_strat = tropics(model)
+
+            if i == 0:
+                ax.scatter(cold_point, upper_strat, s = 35, c = 'r', marker = 'o', alpha = 0.5, label = 'high-top')
+            else: 
+                ax.scatter(cold_point, upper_strat, s = 35, c = 'r', marker = 'o', alpha = 0.5)
+            i+=1
+        except:
+            print(f'unable to plot... {id}')
+        
+        model.close()
+
+    # plot low-top models  
+    i = 0
+    for id in lo_model_li:
+        print(f'{id}')
+        try: 
+            model = pangeo_pull(id, '')
+            model = model.sel(time = slice('1980-01-01', '2014-01-12'))
+            plev = model.coords['plev'].values
+            model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
+            
+            # extract means
+            cold_point, upper_strat = tropics(model)
+
+            if i == 0:
+                ax.scatter(cold_point, upper_strat, s = 35, c = 'b', marker = 'o', alpha = 0.5, label = 'low-top')
+            else: 
+                ax.scatter(cold_point, upper_strat, s = 35, c = 'b', marker = 'o', alpha = 0.5)
+            i+=1
+        except:
+            print(f'unable to plot... {id}')
+        
+        model.close()
+          
+    
+    plt.title('CMIP6 Models Mean Temperature in the Tropics')
+    plt.xlabel('Tropopause')
+    plt.ylabel('Upper Stratosphere')
+    plt.legend()
+    
+    #ax.yaxis.set_major_locator(MultipleLocator(5))  # Tick every 2 on y-axis
+    #ax.yaxis.set_minor_locator(MultipleLocator(1))  
+    #ax.xaxis.set_major_locator(MultipleLocator(1))  # Tick every 2 on x-axis
+    
+    print(f'saving to...{savename}')
+    plt.savefig(savename, dpi = 300)
+    return
 
 if __name__ == '__main__':
     hi_model_li = ['EC-Earth3',
@@ -246,4 +367,4 @@ if __name__ == '__main__':
                     'NorESM2-MM',
                     'TaiESM1']
     
-    summary_1(hi_model_li, lo_model_li, '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-27-2025/summary_1_test_2.png')
+    summary_2(hi_model_li, lo_model_li, '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-27-2025/summary_2.png')
