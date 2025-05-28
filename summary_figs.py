@@ -74,8 +74,7 @@ def summary_1(hi_model_li, lo_model_li, savename):
     lat = jra55.coords['lat']
     jra55 = jra55.assign_coords(lat = lat.round(1)) # convert from pa to hpa
     
-    rean_li = [jra55, era5, merra2]
-    # rean_li = [era5, merra2, jra55]
+    rean_li = [era5, jra55, merra2]
 
     i = 0
     for rean in rean_li:
@@ -83,17 +82,13 @@ def summary_1(hi_model_li, lo_model_li, savename):
         rean = rean.sel(time = slice('1980-01-01', '2014-01-12'))
 
         if i == 0:
-            npole, spole = poles_rean(rean)
+            npole, spole = poles_rean(rean, detrend = False)
             ax.scatter(spole, npole, s = 35, c = 'k', marker = 'o', alpha = 0.5, label = 'reanalysis')
             print(f'plotted!')
-        elif i == 1:
-            npole, spole = poles_rean_2(rean)
+        else:
+            npole, spole = poles_rean(rean, detrend = True)
             ax.scatter(spole, npole, s = 35, c = 'k', marker = 'o', alpha = 0.5)
             print(f'plotted!')
-        else: 
-            npole, spole = poles_rean_3(rean)
-            ax.scatter(spole, npole, s = 35, c = 'k', marker = 'o', alpha = 0.5)
-            print('plotted!')
         i +=1
         rean.close()
 
@@ -152,7 +147,6 @@ def summary_1(hi_model_li, lo_model_li, savename):
     ax.yaxis.set_minor_locator(MultipleLocator(1))  
     ax.xaxis.set_major_locator(MultipleLocator(2))  # Tick every 2 on x-axis
     ax.xaxis.set_minor_locator(MultipleLocator(1))  
-    #plt.xlim(202, 223)
     
     print(f'saving to...{savename}')
     plt.savefig(savename, dpi = 300)
@@ -290,9 +284,9 @@ def summary_2(hi_model_li, lo_model_li, savename):
     plt.ylabel('Upper Stratosphere')
     plt.legend()
     
-    #ax.yaxis.set_major_locator(MultipleLocator(5))  # Tick every 2 on y-axis
-    #ax.yaxis.set_minor_locator(MultipleLocator(1))  
-    #ax.xaxis.set_major_locator(MultipleLocator(1))  # Tick every 2 on x-axis
+    ax.yaxis.set_major_locator(MultipleLocator(5))  # Tick every 2 on y-axis
+    ax.yaxis.set_minor_locator(MultipleLocator(1))  
+    ax.xaxis.set_major_locator(MultipleLocator(1))  # Tick every 2 on x-axis
     
     print(f'saving to...{savename}')
     plt.savefig(savename, dpi = 300)
