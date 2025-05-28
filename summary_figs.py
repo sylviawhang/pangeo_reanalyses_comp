@@ -1,7 +1,7 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-from reanalyses_plots import seasonal_zonal_mean, seasonal_zonal_mean_detrended, annual_zonal_mean, annual_zonal_mean_detrended
+from reanalyses_plots import seasonal_zonal_mean, seasonal_zonal_mean_detrended, annual_zonal_mean, annual_zonal_mean_detrended, annual_zonal_trend
 from pangeo_pull import pangeo_pull
 from ncf_funct import concat_era, area_weighted_mean_2
 from matplotlib.ticker import MultipleLocator
@@ -28,53 +28,25 @@ def poles(model):
 
     return npole, spole
 
-def poles_rean(model):
+def poles_rean(model, detrend = True):
  # extract poles
     model = model.sel(plev = slice(500,1))
-    model = seasonal_zonal_mean_detrended(model, 'lon', 'time', 'ta')
+    if detrend:
+        model = seasonal_zonal_mean_detrended(model, 'lon', 'time', 'ta')
+    else:
+        model = seasonal_zonal_mean(model, 'lon', 'time', 'ta')
 
-    npole = model.sel(season = 'DJF', lat = slice(90, 60), plev = slice(800,1))
+    if model.lat[0] < model.lat[1]:
+        npole = model.sel(season = 'DJF', lat = slice(60, 90), plev = slice(500,1))
+        spole = model.sel(season = 'JJA', lat = slice(-90, -60), plev = slice(500,1))
+    else:
+        npole = model.sel(season = 'DJF', lat = slice(90, 60), plev = slice(500,1))
+        spole = model.sel(season = 'JJA', lat = slice(-60, -90), plev = slice(500,1))
+
     npole = area_weighted_mean_2(npole, 'lat')
     npole = npole.mean(dim = 'plev').variables['ta'].values
     print(f'npole: {npole}')
             
-    spole = model.sel(season = 'JJA', lat = slice(-60, -90), plev = slice(800,1))
-    spole = area_weighted_mean_2(spole, 'lat')
-    spole = spole.mean(dim = 'plev').variables['ta'].values
-    print(f'spole: {spole}')
-
-    return npole, spole
-
-def poles_rean_2(model):
- # extract poles
-    model = model.sel(plev = slice(500,1))
-    model = seasonal_zonal_mean(model, 'lon', 'time', 'ta')
-    print(model)
-    
-    npole = model.sel(season = 'DJF', lat = slice(60, 90), plev = slice(800,1))
-    npole = area_weighted_mean_2(npole, 'lat')
-    npole = npole.mean(dim = 'plev').variables['ta'].values
-    print(f'npole: {npole}')
-            
-    spole = model.sel(season = 'JJA', lat = slice(-90, -60), plev = slice(800,1))
-    spole = area_weighted_mean_2(spole, 'lat')
-    spole = spole.mean(dim = 'plev').variables['ta'].values
-    print(f'spole: {spole}')
-
-    return npole, spole
-
-def poles_rean_3(model):
- # extract poles
-    model = model.sel(plev = slice(500,1))
-    model = seasonal_zonal_mean_detrended(model, 'lon', 'time', 'ta')
-    print(model)
-    
-    npole = model.sel(season = 'DJF', lat = slice(60, 90), plev = slice(800,1))
-    npole = area_weighted_mean_2(npole, 'lat')
-    npole = npole.mean(dim = 'plev').variables['ta'].values
-    print(f'npole: {npole}')
-            
-    spole = model.sel(season = 'JJA', lat = slice(-90, -60), plev = slice(800,1))
     spole = area_weighted_mean_2(spole, 'lat')
     spole = spole.mean(dim = 'plev').variables['ta'].values
     print(f'spole: {spole}')
@@ -232,8 +204,8 @@ def summary_2(hi_model_li, lo_model_li, savename):
     ax = fig.add_subplot()
 
     # plot reanalyses
-    era5 = concat_era()
-    era5 = era5.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})
+    '''era5 = concat_era()
+    era5 = era5.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})'''
 
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     merra2 = merra2.rename({'lat':'lat', 'lon':'lon', 'lev':'plev', 'time': 'time', 'T':'ta'})
@@ -247,7 +219,8 @@ def summary_2(hi_model_li, lo_model_li, savename):
     lat = jra55.coords['lat']
     jra55 = jra55.assign_coords(lat = lat.round(1)) # convert from pa to hpa
     
-    rean_li = [era5, jra55, merra2]
+    #rean_li = [era5, jra55, merra2]
+    rean_li = [jra55, merra2]
 
     i = 0
     for rean in rean_li:
@@ -312,7 +285,7 @@ def summary_2(hi_model_li, lo_model_li, savename):
         model.close()
           
     
-    plt.title('CMIP6 Models Mean Temperature in the Tropics')
+    plt.title('CMIP6 Models Temperature Trends in the Tropics')
     plt.xlabel('Tropopause')
     plt.ylabel('Upper Stratosphere')
     plt.legend()
@@ -367,4 +340,4 @@ if __name__ == '__main__':
                     'NorESM2-MM',
                     'TaiESM1']
     
-    summary_2(hi_model_li, lo_model_li, '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-27-2025/summary_2.png')
+    summary_2(hi_model_li, lo_model_li, '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-27-2025/summary_2_trends.png')
