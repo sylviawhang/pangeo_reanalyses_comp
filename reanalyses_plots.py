@@ -1,10 +1,13 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-from ncf_funct import detrend_fct, difference, find_trend
+from ncf_funct import detrend_fct, difference, find_trend, concat_era
 from datetime import datetime
 import colorcet as cc
-import cmasher as cmr
+
+# Sylvia Whang siw2111@barnard.edu Spring 2025
+# Functions to make plots comparing reanalsyes as in Figs 2-3 of phonebook 
+# Helper Functions to find annual and seasonal zonal means and trends. 
 
 '''        Variable Names
             ERA5,              MERRA2,    JRA55 
@@ -16,7 +19,7 @@ Temperature: 't'       ,         'T'      'TMP_GDS4_HYBL_S123'
 U-wind        'u'       ,        'U'          
 Ozone:         'o3'               'O3'                       '''
 
-# plotting functions
+# helper functions
 
 def annual_zonal_mean(xrds, lon, time, variable):
     xrds = xrds[[variable]]
@@ -61,6 +64,8 @@ def annual_zonal_trend(xrds, lon, time, variable):
     xrds = xrds.mean(dim = lon)
     xrds = find_trend(xrds)
     return xrds
+
+# plotting functions
 
 def plot_zonal_means(xrds, savename, lat, lon, lev, time, variable, title):
     # Goal create a 1 x 5 plot of climatological zonal means
@@ -189,10 +194,12 @@ def plot_annual(xrds, lon, lat, lev, time, variable, savename):
     print(f'saving to... {savename}')
     plt.savefig(savename, dpi = 300)
 
-# plot to compare MERRA2 and JRA55
 
+# Compare climatology and trends of JRA-55 or ERA-5.1 reanlayses to MERRA-2
+
+# calculate climatology or trends and compute difference. 
 def load_reans(time_range:tuple):
-    
+
     time_slice = slice(f'{time_range[0]}-01-01', f'{time_range[1]}-12-01')
 
     # load reanalysis
@@ -203,7 +210,11 @@ def load_reans(time_range:tuple):
     rean = rean.sortby('time')
     rean = rean.sel(time = time_slice)
     
-    # load jra55
+   # load ERA-5.1
+    '''model = concat_era()
+    model = model.rename({'latitude':'lat', 'longitude':'lon', 'pressure_level':'plev', 'valid_time': 'time', 't':'ta'})'''
+
+    # load JRA-55
     model = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T.nc', chunks = 'auto')
     model = model.rename({'g4_lat_2':'lat', 'g4_lon_3':'lon', 'lv_HYBL1':'plev', 'initial_time0_hours': 'time', 'TMP_GDS4_HYBL_S123':'ta'})
     
@@ -213,53 +224,56 @@ def load_reans(time_range:tuple):
     model = model.sel(plev = slice(1000,1))
     model =model.sel(time = time_slice)
 
-    annual_model = annual_zonal_trend(model, 'lon', 'time', 'ta')
+    # if finding trends...
+    '''annual_model = annual_zonal_trend(model, 'lon', 'time', 'ta')
     seasonal_model = seasonal_zonal_trend(model, 'lon', 'time', 'ta')
 
     annual_rean = annual_zonal_trend(rean, 'lon', 'time', 'ta')
-    seasonal_rean = seasonal_zonal_trend(rean, 'lon', 'time', 'ta')
+    seasonal_rean = seasonal_zonal_trend(rean, 'lon', 'time', 'ta')'''
 
-    '''annual_model = annual_zonal_mean_detrended(model, 'lon', 'time', 'ta')
-    seasonal_model = seasonal_zonal_mean_detrended(model, 'lon', 'time', 'ta')
+    # if finding means...
+    annual_model = annual_zonal_mean(model, 'lon', 'time', 'ta')
+    seasonal_model = seasonal_zonal_mean(model, 'lon', 'time', 'ta')
 
-    annual_rean = annual_zonal_mean_detrended(rean, 'lon', 'time', 'ta')
-    seasonal_rean = seasonal_zonal_mean_detrended(rean, 'lon', 'time', 'ta')'''
+    annual_rean = annual_zonal_mean(rean, 'lon', 'time', 'ta')
+    seasonal_rean = seasonal_zonal_mean(rean, 'lon', 'time', 'ta')
 
     xrds_li = [(annual_model, annual_rean), (seasonal_model, seasonal_rean)]
     diff_li = []
 
     for model, rean in xrds_li:
         diff = difference(model, rean)
+        print(diff)
         diff_li.append(diff)
 
     annual_diff = diff_li[0] 
     seasonal_diff = diff_li[1] 
 
-    #maximum = max(float(diff_li[0]['ta'].max()), float(diff_li[1]['ta'].max()))
-    #minimum = max(float(diff_li[0]['ta'].min()), float(diff_li[1]['ta'].min()))
-    maximum = 0
-    minimum = 0
+    maximum = max(float(diff_li[0]['ta'].max()), float(diff_li[1]['ta'].max()))
+    minimum = max(float(diff_li[0]['ta'].min()), float(diff_li[1]['ta'].min()))
+
     print(f'maximum difference: {maximum} \n minimum difference: {minimum}')
 
     data = (annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff)
 
     return data, maximum, minimum
-    
+
+# make 3 x 5 plot of reanalyses and their differences, anually and in the four seasons.  
 def compare_rean(data, savename, time_range):
 
     annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff = data
     fig, axes = plt.subplots(nrows = 5, ncols = 3, figsize = (25, 20), 
                              sharex = True, sharey = False, layout = 'constrained')
 
-    #fig.suptitle(f'Zonal Mean Temperature \n in {time_range[0]}-{time_range[1]}', fontsize = 20)
-    fig.suptitle(f'Temperature Trend \n in {time_range[0]}-{time_range[1]}', fontsize = 20)
+    fig.suptitle(f'Zonal Mean Temperature \n in {time_range[0]}-{time_range[1]}', fontsize = 20)
+    #fig.suptitle(f'Temperature Trend \n in {time_range[0]}-{time_range[1]}', fontsize = 20)
 
 
     k = 0
-    for name, annual, seasonal in [('JRA-55', annual_model, seasonal_model), ('MERRA2',annual_rean, seasonal_rean)]:
+    for name, annual, seasonal in [('ERA-5.1', annual_model, seasonal_model), ('MERRA2',annual_rean, seasonal_rean)]:
         # plot model
-       #boundaries = [175, 180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]
-        boundaries = [-2.0, -1.8, -1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0]
+        boundaries = [175, 180, 185, 190, 195, 200, 205, 210, 215, 220, 225, 230, 235, 240, 245, 250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300] # means
+        #boundaries = [-5,-3.0, -2, -1.8,-1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 5] # trends
 
         cf = xr.plot.contourf(annual['ta'],
                 x = 'lat',
@@ -269,8 +283,8 @@ def compare_rean(data, savename, time_range):
                 cbar_kwargs= {'drawedges':True, 'ticks':boundaries},
                 levels = boundaries,
                 add_labels = False,
-                #cmap= cc.cm.rainbow4,
-                cmap = cmr.prinsenvlag_r,
+                cmap= cc.cm.rainbow4,
+                #cmap = cmr.prinsenvlag_r,
                 extend="both",
                 yscale = 'log',
                 ylim = (1000, 1),
@@ -306,8 +320,8 @@ def compare_rean(data, savename, time_range):
                 cbar_kwargs= {'drawedges':True, 'ticks':boundaries},
                 levels = boundaries,
                 add_labels = False,
-                #cmap= cc.cm.rainbow4,
-                cmap = cmr.prinsenvlag_r,
+                cmap= cc.cm.rainbow4,
+                #cmap = cmr.prinsenvlag_r,
                 extend="both",
                 yscale = 'log',
                 ylim = (1000, 1),
@@ -338,8 +352,8 @@ def compare_rean(data, savename, time_range):
         k+=1
 
     # plot difference
-    #boundaries = [-50,-30, -20,-18, -16,-14, -12, -10, -8, -6, -4, -2, -1, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20,30, 50]
-    boundaries = [-5,-3.0,-2.5, -2, -1.8,-1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0, 5]
+    boundaries = [-50,-30, -20,-18, -16,-14, -12, -10, -8, -6, -4, -2, -1, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20,30, 50] # means
+    #boundaries = [-5,-3.0, -2, -1.8,-1.6, -1.4, -1.2, -1, -0.8, -0.6, -0.4, -0.2, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2.0, 3.0, 5] # for trends
 
     cf = xr.plot.contourf(annual_diff['ta'],
             x = 'lat',
@@ -350,6 +364,7 @@ def compare_rean(data, savename, time_range):
             levels = boundaries,
             add_labels = False,
             cmap= cc.cm.CET_D9,
+            #cmap = cmr.prinsenvlag_r,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -387,6 +402,7 @@ def compare_rean(data, savename, time_range):
             levels = boundaries,
             add_labels = False,
             cmap= cc.cm.CET_D9,
+            #cmap = cmr.prinsenvlag_r,
             extend="neither",
             yscale = 'log',
             ylim = (1000, 1),
@@ -427,7 +443,7 @@ if __name__ == '__main__':
     model = 'JRA-55'
     time_range = ('1980','2014')
     data, maximum, minimum = load_reans(time_range)
-    savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-10-2025/{model}_trend_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
+    savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/05-27-2025/{model}_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
     compare_rean(data, savename, time_range)
         
     end = datetime.now()

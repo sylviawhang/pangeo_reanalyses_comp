@@ -7,9 +7,9 @@ from reanalyses_plots import plot_annual
 from ncf_funct import sort_coordinate, area_weighted_mean, concat_era
 from matplotlib.ticker import MultipleLocator
 
-
-'''cat = open_catalog("https://raw.githubusercontent.com/pangeo-data/pangeo-datastore/master/intake-catalogs/climate.yaml")
-print(cat.walk(depth = 4))'''
+# Sylvia Whang siw2111@barnard.edu, Spring 2025. 
+# function pangeo_pull to access models from panGeo database -- made to access one dataset at a time. 
+# trend_plot used to make time series of all models together as in Figs 6-17 of phonebook.
 
 def pangeo_pull(source_id = 'GISS-E2-1G', institution_id = 'NASA-GISS', variable_id = 'ta', experiment_id = 'historical', grid_label = 'gn', table_id = 'Amon', dict = False):
 # Load the catalog
@@ -42,25 +42,18 @@ def pangeo_pull(source_id = 'GISS-E2-1G', institution_id = 'NASA-GISS', variable
     
     if dict:
         return dset_dict
-    
-    #name = f'CMIP.{institution_id}.{source_id}.{experiment_id}.{table_id}.{grid_label}'
-    
+        
     name = list(dset_dict.keys())[0]
-    #print(name)
     xrds = dset_dict[name]
 
-    #print(xrds)
     return(xrds)
 
 # make a plot
 def group_year(xrds, time, lat, lon, model = True): # pre-process data for each pressure level
-    #print('mean over year, latitude, longitude...')
     xrds = xrds.groupby(f'{time}.year').mean()
     xrds = area_weighted_mean(xrds, lat, lon)
     if model:
         xrds = xrds.sel(member_id = 'r1i1p1f1')
-    #xrds = xrds.sel(year = slice(1980,2014))
-    #print(xrds)
     return xrds
 
 def line_plot():
@@ -70,12 +63,6 @@ def line_plot():
     
     model = model.sel(time = slice('1980-01-01', '2014-01-12'))
     model.coords['time'] = model.coords['time'].to_index()
-
-    #model = detrend_model(model)
-
-    '''model_10 = group_year(model.sel(plev = 1e+01), time = 'time', lon = 'lon', lat = 'lat')
-    
-    xr.plot.line(model_10['ta'], x = 'year', color = 'r', label = 'GISS-E2-1-G annual mean', zorder = 20)'''
     
     model = area_weighted_mean(model, 'lat', 'lon')
     model = model.sel(plev = 1e+01)
@@ -85,10 +72,7 @@ def line_plot():
     xr.plot.line(model['ta'], x = 'time', color = 'b', label = 'GISS-E2-1-G monthly mean' , zorder = 5)
 
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
-    merra2 = sort_coordinate(merra2) # sort time
-    '''merra2_10 = group_year(merra2.sel(lev = 1e+01), time = 'time', lon = 'lon', lat = 'lat', model = False)
-    xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2 annual mean', color = 'b', zorder = 10)'''
-    
+    merra2 = sort_coordinate(merra2) # sort time    
     merra2 = area_weighted_mean(merra2, 'lat', 'lon')
     merra2 = merra2.sel(lev =1e+01)
     merra2 - merra2.sel(time = slice('1980-01-01', '2014-01-12'))
@@ -106,15 +90,15 @@ def line_plot():
 
 def trend_plot(level, savename):
     # set color map
-    fig = plt.figure(figsize = (10,5))
+    fig = plt.figure(figsize = (7,5))
     ax = fig.add_subplot()
-    number_models = 20
+    '''number_models = 20
     colormap = plt.cm.nipy_spectral
     colors = colormap(np.linspace(0, 1, number_models))
-    ax.set_prop_cycle('color', colors) 
+    ax.set_prop_cycle('color', colors)'''
     
     hi_model_li = ['EC-Earth3',
-                    'EC-Earth3-CC', 
+                    'EC-Earth3-CC',  
                     'EC-EARTH3-Veg',
                     'E3SM-1-1', 
                     'MRI-ESM2-0',
@@ -153,22 +137,28 @@ def trend_plot(level, savename):
                 'NorESM2-LM',
                 'NorESM2-MM',
                 'TaiESM1']
+    i = 0
     for id in lo_model_li:
         try:
             print(f'plotting {id}----------------------------------')
             model = pangeo_pull(id, '')
             plev = model.coords['plev'].values
             model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
-            
-            #model = model.sel(lat = slice(60, 90))
-            
+                        
             model_10 = group_year(model.sel(plev = level), time = 'time', lon = 'lon', lat = 'lat') # annual mean, mean over latitude, longitude
-            ax.plot(model_10['year'], model_10['ta'], label = id, linewidth = 0.75, linestyle = 'dotted')
-            model.close()
+            
+            if i == 0:
+                ax.plot(model_10['year'], model_10['ta'], label = 'low-top', linewidth = 0.75, color = 'b', zorder = 5, linestyle = 'dotted')
+                model.close()
+            else: 
+                ax.plot(model_10['year'], model_10['ta'], linewidth = 0.75, color = 'b', linestyle = 'dotted')
+        
         except:
             print(f'error: unable to plot {id}')
             continue
-
+        i+= 1
+    
+    i = 0
     for id in hi_model_li:
         try: 
             print(f'plotting {id}----------------------------------')
@@ -176,44 +166,43 @@ def trend_plot(level, savename):
             plev = model.coords['plev'].values
             model = model.assign_coords(plev = np.divide(plev,100).round(1)) # convert from pa to hpa
             
-            #model = model.sel(lat = slice(60, 90))
-
             model_10 = group_year(model.sel(plev = level), time = 'time', lon = 'lon', lat = 'lat') # annual mean, mean over latitude, longitude
-            ax.plot(model_10['year'], model_10['ta'], label = id, linewidth = 0.75)
-            model.close()
+            if i == 0:
+                ax.plot(model_10['year'], model_10['ta'], label = 'high-top', linewidth = 0.75, color = 'r', zorder = 1)
+                model.close()
+            else: 
+                ax.plot(model_10['year'], model_10['ta'], linewidth = 0.75, color = 'r')
         except:
             print(f'error: unable to plot {id}')
             continue
+        i+=1
 
     era5 = concat_era()
-    #era5 = era5.sel(latitude = slice(60, 90))
     era5_10 = group_year(era5.sel(pressure_level = level), time = 'valid_time', lon = 'longitude', lat = 'latitude', model = False)
-    xr.plot.line(era5_10['t'], x = 'year', label = 'ERA5.1', color = 'lightgrey', linewidth = 1)
+    xr.plot.line(era5_10['t'], x = 'year', label = 'reanalysis', color = 'k', linewidth = 0.75, zorder = 10)
     era5.close()
 
     merra2 = xr.open_dataset('/dx02/siw2111/MERRA-2/MERRA-2_TEMP_ALL-TIME.nc4', chunks = 'auto')
     merra2 = sort_coordinate(merra2) # sort time
-    #merra2 = merra2.sel(lat = slice(60, 90))
     merra2_10 = group_year(merra2.sel(lev = level), time = 'time', lon = 'lon', lat = 'lat', model = False)
-    xr.plot.line(merra2_10['T'], x = 'year', label = 'MERRA2', color = 'tab:grey', linewidth = 1)
+    xr.plot.line(merra2_10['T'], x = 'year', color = 'k', linewidth = 0.75)
     merra2.close()
 
     jra55 = xr.open_dataset('/dx02/siw2111/JRA-55/JRA-55_T_interpolated.nc', chunks = 'auto')
-    #jra55 = jra55.sel(latitude = slice(60, 90))
     jra55_10 = group_year(jra55.sel(pressure_level = level), time = 'initial_time0_hours', lon = 'longitude', lat = 'latitude', model = False)
-    xr.plot.line(jra55_10['TMP_GDS4_HYBL_S123'], x = 'year', label = 'JRA55', color = 'k', linewidth = 1)
+    xr.plot.line(jra55_10['TMP_GDS4_HYBL_S123'], x = 'year', color = 'k', linewidth = 0.75)
     jra55.close()
 
     plt.title(f'Temperature as a Function of Time at {level} hpa ')
    
     plt.xlabel('time YYYY')
-    plt.xlim(1850,2014)
+    plt.xlim(1980,2014)
 
     ax.set_ylabel('temperature K')
     print(f'saving to...{savename}')
     
-    fig.subplots_adjust(right=0.7)
-    fig.legend(ncols = 2, fontsize = 'small', loc = 7)
+    fig.subplots_adjust(right=0.8) # 0.7 normally
+    fig.legend(ncols = 1, fontsize = 'small', loc = 7)
     ax.yaxis.set_major_locator(MultipleLocator(5))  # Tick every 5 on y-axis
     ax.yaxis.set_minor_locator(MultipleLocator(1))  # Tick every 5 on y-axis
     ax.yaxis.set_ticks_position('both')  
@@ -240,16 +229,8 @@ def plot_climatology(xrds, savename):
                 variable = 'ta')
 
 if __name__ == '__main__':
-    trend_plot(100,  '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-21-2025/100_line_1850-2014_1.png')
-    trend_plot(70, '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-21-2025/70_line_1850-2014.png')
-    '''trend_plot(5, '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/5_line_1850-2014_1.png')
-    trend_plot(50, '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/50_line_1850-2014_1.png')
-    trend_plot(100, '/home/siw2111/cmip6_reanalyses_comp/model_plots/04-20-2025/100_line_1850-2014_1.png')'''
+    trend_plot(10, '/home/siw2111/cmip6_reanalyses_comp/model_plots/05-22-2025/10_line_1980-2014.png')
 
-    
-    
-    #savename = '/home/siw2111/cmip6_reanalyses_comp/model_plots/03-20-2025/GISS-E2-1-G_climatology_1980-2014_1.png'
-    #plot_climatology(xrds, savename)
 
 
 

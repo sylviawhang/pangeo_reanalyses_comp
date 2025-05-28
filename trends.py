@@ -1,15 +1,13 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
-import colorcet as cc
 import cmasher as cmr
 from datetime import datetime
 from pangeo_pull import pangeo_pull
 from ncf_funct import difference, find_trend
 from dask.diagnostics import ProgressBar
 
-
-# plots to compare model and reanalysis climatology
+# plots to compare model and reanalysis trends. As seen in Figures 58-95 of phonebook.
 
 def seasonal_zonal_trend(xrds, lon, time, variable):
     print(f'finding seasonal trends...')
@@ -76,14 +74,9 @@ def load_models(source_id, institution_id, time_range:tuple):
     annual_diff = diff_li[0] 
     seasonal_diff = diff_li[1] 
 
-    #maximum = max(float(diff_li[0]['ta'].max()), float(diff_li[1]['ta'].max()))
-    #minimum = max(float(diff_li[0]['ta'].min()), float(diff_li[1]['ta'].min()))
-    #print(f'maximum difference: {maximum} \n minimum difference: {minimum}')
-    maximum = 0
-    minimum = 0
     data = (source_id, annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff)
 
-    return data, maximum, minimum
+    return data
     
 def plot_trend(data, savename, time_range):
     model, annual_model, annual_rean, annual_diff, seasonal_model, seasonal_rean, seasonal_diff = data
@@ -272,16 +265,3 @@ if __name__ == '__main__':
             except:
                 print(f'error: unable to plot {model}')
                 continue
-
-    '''
-    start = datetime.now()
-    
-    model = 'CESM2-WACCM'
-    institution = ''
-    time_range = ('1980', '2014')
-    data, maximum, minimum = load_models(model, institution, time_range)
-    savename = f'/home/siw2111/cmip6_reanalyses_comp/model_plots/04-10-2025/{model}_trends_{time_range[0]}-{time_range[1]}_{maximum}{minimum}.png'
-    plot_trend(data, savename, time_range)
-    
-    end = datetime.now()
-    print(f'finished at {end}, runtime: {end - start}')'''

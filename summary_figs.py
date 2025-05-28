@@ -6,11 +6,12 @@ from pangeo_pull import pangeo_pull
 from ncf_funct import concat_era, area_weighted_mean_2
 from matplotlib.ticker import MultipleLocator
 
+# 5/26/2026 by Sylvia Whang siw2111@barnard.edu
+# Summary Plots for model climatology and trends (see Figs 18, 19, 57 in phonebook). 
 
-# first plot: Polar night (DJF 60-90) versus JJA (-60--90) 
+# first plot: Polar night (DJF 60-90) versus JJA (-60--90) in levels (500hPa, 1hPa). 
+# second plot: Tropopause (200hPa, 10hPa) versus upper stratosphere (10hPa, 1hPa) in the tropics (-30 deg N, 30 deg N)
 # high-top models in red, low-top models in blue, reanalyses in red. 
-
-# models 
 
 def poles(model):
  # extract poles
@@ -213,7 +214,6 @@ def summary_2(hi_model_li, lo_model_li, savename):
     lat = jra55.coords['lat']
     jra55 = jra55.assign_coords(lat = lat.round(1)) # convert from pa to hpa
     
-    #rean_li = [era5, jra55, merra2]
     rean_li = [jra55, merra2]
 
     i = 0

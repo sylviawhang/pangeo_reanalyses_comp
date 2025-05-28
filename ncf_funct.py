@@ -5,8 +5,8 @@ from scipy.signal import detrend
 from scipy.stats import linregress
 from dask.diagnostics import ProgressBar
 
-
-# net cdf functions 
+# Sylvia Whang siw2111@barnard.edu, Spring 2025
+# net cdf helper functions 
 
 def cdf_merge(files_path, savename, concat_dim,  variable):
     # ex. files path \home\data\*.nc
@@ -27,7 +27,7 @@ def sort_coordinate(xrds):
     return xrds
 
 def replace_coordinate(xrds): 
-    # replace pressure levels with values for JRA55
+    # replace pressure level indicies with values for JRA55
     print(xrds.coords['lv_HYBL1'].values)
     print(len(xrds.coords['lv_HYBL1'].values))
     levels = np.array([998.5,995.5,991.499,985.498,976.996,965.994,952.991,936.986,917.982,896.978,873.47,846.961,817.954,786.946,754.44,720.429,684.417,
@@ -49,15 +49,19 @@ def area_weighted_mean(xrds, lat, lon):
     weighted_mean = xrds_weighted.mean(dim = [lat, lon])
     return weighted_mean
 
+def area_weighted_mean_2(xrds, lat):
+    # create weights
+    weights = np.cos(np.deg2rad(xrds[lat]))
+    weights.name = "weights"
+    
+    # take weighted mean
+    xrds_weighted = xrds.weighted(weights)
+    weighted_mean = xrds_weighted.mean(dim = [lat])
+    return weighted_mean
+
 def detrend_fct(xrds):
-    #print(xrds.variables['ta'].values)
-
     xrds = xrds.dropna(dim = 'plev', how = 'any') # find a better way to do this.
-    
     const = xrds['ta'].mean(dim = 'time')
-
-    #print(xrds.variables['ta'].values)
-    
     detrended_temp = xr.apply_ufunc(
     detrend, xrds['ta'],
     kwargs={"axis": xrds['ta'].get_axis_num('time'), "type": "linear"},
@@ -71,7 +75,7 @@ def linear_fit(x):
 
 def find_trend(xrds):
     xrds = xrds.dropna(dim = 'plev', how = 'any') # find a better way to do this.
-    #print(xrds)
+    print(xrds)
     
     xrds = xrds.groupby('time.year').mean(dim = 'time')
     trend = xr.apply_ufunc(linear_fit, 
@@ -85,8 +89,6 @@ def find_trend(xrds):
 
     xrds = xrds.mean(dim = 'year')
     xrds = xrds * 10 # convert /year to /decade
-    #with ProgressBar():
-       #print(xrds.variables['ta'].values) 
 
     return xrds # trend K/decade
 
@@ -122,15 +124,12 @@ def interpolate_plev(xrds1, xrds2):
 
 def concat_era(era5 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5_T.nc', chunks = 'auto'), era51 = xr.open_dataset('/dx02/siw2111/ERA-5/ERA-5.1/ERA5-1-gridded.nc', chunks = 'auto')):
     # insert era5.1 2000-2006 data into era5
-    print(era51.coords['valid_time'].values)
+    
     era5_pre = era5.sel(valid_time = slice('1980-01-01', '1999-12-01'))
-    print(era5_pre)
     era5_post = era5.sel(valid_time = slice('2006-02-01', '2024-01-01'))
-    print(era51)
-    print(era5_post)
     era51_concat = xr.concat([era5_pre, era51, era5_post], dim = 'valid_time')
-    print(era51_concat)
-    return era51_concat
+
+    return era51_concat 
 
 def interpolate(xrds1, xrds2):
     # interpolate xrds1 dimension to match xrds2
